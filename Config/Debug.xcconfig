@@ -1,0 +1,5 @@
+#include "Shared.xcconfig"
+
+// Debug-only overrides go here.
+// API_BASE_URL inherits from Shared.xcconfig; flip it here if a debug
+// build should target a non-prod backend.

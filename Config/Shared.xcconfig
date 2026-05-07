@@ -1,0 +1,5 @@
+// Suply backend base URL. Mirrors the Android `API_BASE_URL` BuildConfig
+// field in `app/build.gradle.kts`. The `$()` between the slashes is the
+// xcconfig escape for the `//` comment marker — without it the value
+// would be truncated at the second slash.
+API_BASE_URL = https:/$()/suply.app/
