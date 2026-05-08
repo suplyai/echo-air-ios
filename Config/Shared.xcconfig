@@ -3,3 +3,11 @@
 // xcconfig escape for the `//` comment marker — without it the value
 // would be truncated at the second slash.
 API_BASE_URL = https:/$()/suply.app/
+
+// Spike-only credentials (debug builds). Empty by default — real values
+// live in the gitignored `Local.xcconfig` (see Local.xcconfig.template).
+// Defining empty defaults here means the build settings always resolve,
+// so `$(SPIKE_DEVICE_MAC)` substitution into Info.plist never leaks the
+// literal `$(...)` token into the built bundle.
+SPIKE_DEVICE_MAC =
+SPIKE_DEVICE_PASSWORD =

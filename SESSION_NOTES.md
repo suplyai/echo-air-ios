@@ -102,6 +102,20 @@ on-device spike.
 8. Phase 2 is done when all four §3.10 invariants are confirmed.
    Report back with the spike log.
 
+### Followup: spike credentials moved into `Local.xcconfig`
+
+After review, the placeholder MAC + password in `SpikeConfig.swift`
+were a tripwire for accidental commits. Moved both into the
+already-gitignored `Config/Local.xcconfig`, surfaced to runtime via
+`Info.plist` `$(VAR)` substitution (mirroring the existing
+`API_BASE_URL` plumbing). All test secrets now live in one gitignored
+place; `SpikeConfig.swift` reads them via
+`Bundle.main.object(forInfoDictionaryKey:)` and the empty-string
+fallback keeps the spike's "ABORT if empty" check intact. Empty
+defaults in `Shared.xcconfig` mean the build settings always resolve
+even on a fresh checkout, so the literal `$(SPIKE_DEVICE_MAC)` token
+never leaks into a built Info.plist.
+
 ### Still deferred
 
 - Phase 3+: UI, DTOs, networking, AWB validation, IATA lookup,

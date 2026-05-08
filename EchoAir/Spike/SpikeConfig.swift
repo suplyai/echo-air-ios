@@ -1,26 +1,39 @@
 #if DEBUG
 import Foundation
 
-/// Spike-only configuration. Values below are placeholders — fill them in
-/// before running the spike on real hardware.
+/// Spike-only configuration. Values come from `Config/Local.xcconfig`
+/// (gitignored) via Info.plist `$(VAR)` substitution — keeping test
+/// credentials in one gitignored place rather than scattered across
+/// source files.
+///
+/// To run the spike, fill in `SPIKE_DEVICE_MAC` and `SPIKE_DEVICE_PASSWORD`
+/// in `Config/Local.xcconfig`. Both default to empty in Shared.xcconfig,
+/// so missing/unset values just disable the spike (SpikeRunner aborts
+/// with an empty-config message rather than connecting to nothing).
 ///
 /// Per handoff §3.10, the device password is `KBeaconIds.DEFAULT_PASSWORD`
-/// on Android. Same value on iOS. Ask the Android Echo Air builder for it.
-/// Do NOT commit the real password (or the test device's MAC) to public
-/// history — these stay in this file as local edits, never pushed.
+/// on Android — same value on iOS. Ask the Android Echo Air builder.
 enum SpikeConfig {
-    /// MAC address of the test S23H, e.g. "AA:BB:CC:DD:EE:FF".
-    static let deviceMacAddress: String = "" // TODO: replace with real test device MAC
+    /// MAC address of the test S23H, e.g. "AA:BB:CC:DD:EE:FF". Sourced
+    /// from `SPIKE_DEVICE_MAC` in Local.xcconfig.
+    static var deviceMacAddress: String {
+        infoDictionaryString("SPIKE_DEVICE_MAC")
+    }
 
-    /// KBeacon device password.
-    /// TODO: replace with the value of `KBeaconIds.DEFAULT_PASSWORD` from
-    /// the Android repo. Do not commit.
-    static let devicePassword: String = ""
+    /// KBeacon device password. Sourced from `SPIKE_DEVICE_PASSWORD` in
+    /// Local.xcconfig.
+    static var devicePassword: String {
+        infoDictionaryString("SPIKE_DEVICE_PASSWORD")
+    }
 
     /// Per-attempt connect ceiling (ms). Handoff §3.10: CONNECT_TIMEOUT_MS = 20_000.
     static let connectTimeoutMs: Int = 20_000
 
     /// Records per readSensorRecord call. Handoff §3.10: BATCH_SIZE = 200.
     static let batchSize: Int = 200
+
+    private static func infoDictionaryString(_ key: String) -> String {
+        (Bundle.main.object(forInfoDictionaryKey: key) as? String) ?? ""
+    }
 }
 #endif

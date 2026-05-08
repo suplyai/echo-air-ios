@@ -2,9 +2,18 @@
 //
 // One-time setup on a fresh checkout:
 //   cp Config/Local.xcconfig.template Config/Local.xcconfig
-//   # then paste the real DEVELOPMENT_TEAM value below.
+//   # then paste the real values below.
 //
 // `Config/Local.xcconfig` is gitignored — DO NOT commit the real file.
-// Ask the project owner for the Apple Developer team ID.
 
+// Apple Developer team. Ask the project owner for the team ID.
 DEVELOPMENT_TEAM = YOUR_APPLE_DEV_TEAM_ID
+
+// Spike-only test device credentials. Read at runtime via Info.plist
+// $(VAR) substitution from EchoAir/Spike/SpikeConfig.swift. Leave blank
+// to disable the spike (it aborts with an empty-config message).
+//
+// MAC format: "AA:BB:CC:DD:EE:FF". Password matches Android's
+// `KBeaconIds.DEFAULT_PASSWORD` — ask the Android Echo Air builder.
+SPIKE_DEVICE_MAC = AA:BB:CC:DD:EE:FF
+SPIKE_DEVICE_PASSWORD = replace-with-real-kbeacon-password
