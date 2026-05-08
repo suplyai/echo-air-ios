@@ -1,3 +1,7 @@
 #include "Shared.xcconfig"
+#include? "Local.xcconfig"
+#include? "../Pods/Target Support Files/Pods-EchoAir/Pods-EchoAir.release.xcconfig"
 
 // Release-only overrides go here.
+//
+// Same #include? rationale as Debug.xcconfig — see comment there.

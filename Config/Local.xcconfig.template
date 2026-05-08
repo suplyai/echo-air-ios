@@ -1,0 +1,10 @@
+// Template for `Config/Local.xcconfig`.
+//
+// One-time setup on a fresh checkout:
+//   cp Config/Local.xcconfig.template Config/Local.xcconfig
+//   # then paste the real DEVELOPMENT_TEAM value below.
+//
+// `Config/Local.xcconfig` is gitignored — DO NOT commit the real file.
+// Ask the project owner for the Apple Developer team ID.
+
+DEVELOPMENT_TEAM = YOUR_APPLE_DEV_TEAM_ID
