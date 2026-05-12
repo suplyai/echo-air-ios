@@ -50,6 +50,13 @@ targets:
         ENABLE_PREVIEWS: YES
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+        # CocoaPods' [CP] Copy Pods Resources / Embed Pods Frameworks
+        # phases shell out to rsync, which the Xcode 15 sandbox default
+        # denies (rsync deny(1) file-write-create at build time).
+        # Project-wide default in `settings.base` stays YES; this is the
+        # narrowest opt-out for the host target. Mirrored in Podfile's
+        # post_install for pod targets — see Podfile.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
       configs:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair.debug

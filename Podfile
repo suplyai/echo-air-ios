@@ -24,10 +24,16 @@ end
 
 post_install do |installer|
   # Clamp pod deployment targets to the host floor so SDK defaults can't
-  # silently drift the project minimum upward.
+  # silently drift the project minimum upward. Also disable User Script
+  # Sandboxing on pod targets — CocoaPods' generated script phases
+  # (rsync-based [CP] copy/embed steps) fail under the Xcode 15 sandbox
+  # default. The host EchoAir target sets this in project.yml; this
+  # block is the matching opt-out for Pods.xcodeproj, which xcodegen
+  # has no visibility into.
   installer.pods_project.targets.each do |t|
     t.build_configurations.each do |c|
       c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+      c.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
     end
   end
 end
