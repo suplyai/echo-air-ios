@@ -196,6 +196,61 @@ your spec:
 PR #1 flag #3 (test credentials unfilled) stays unresolved by design —
 those live in the engineer's gitignored `Local.xcconfig`.
 
+### Followup: `ENABLE_USER_SCRIPT_SANDBOXING` disabled for CocoaPods (commit `47147bd`)
+
+First on-device build attempt failed with `rsync deny(1)
+file-write-create` errors during CocoaPods' `[CP] Copy Pods Resources`
+and `[CP] Embed Pods Frameworks` script phases. Root cause: macOS
+Sequoia + Xcode 16 default `ENABLE_USER_SCRIPT_SANDBOXING = YES`,
+which sandboxes those phases' rsync invocations.
+
+Permanent fix lives in two places:
+
+- `project.yml` sets `ENABLE_USER_SCRIPT_SANDBOXING: NO` on the
+  EchoAir target's `settings.base`. The project-wide default in the
+  top-level `settings.base` stays `YES` as a defensive starting
+  point for any future target that might not need the opt-out.
+- `Podfile`'s `post_install` loop sets `ENABLE_USER_SCRIPT_SANDBOXING
+  = 'NO'` on every pod target's build configurations. xcodegen has no
+  visibility into `Pods.xcodeproj`, so this is the matching opt-out
+  on the CocoaPods side.
+
+Both regeneration paths (`xcodegen generate` and `pod install`)
+preserve the fix. The narrow EchoAir-only opt-out leaves room for
+future non-pod targets (e.g. a unit-test target) to inherit the
+secure default.
+
+### Followup: CocoaPods + xcodegen workflow ordering
+
+**Operational rule, learned the hard way (~1h to diagnose):**
+`xcodegen generate` must ALWAYS run BEFORE `pod install`, never
+after.
+
+Running `xcodegen generate` on an already-pod-installed project
+silently wipes the CocoaPods integration from `EchoAir.xcodeproj` —
+specifically the `[CP] Embed Pods Frameworks` build phase disappears.
+The Swift build still succeeds (the linker resolves `kbeaconlib2` via
+the xcconfig includes that survive regeneration), but the framework
+isn't embedded into the app bundle. The app then crashes at launch
+with `dyld: Library not loaded: @rpath/kbeaconlib2.framework/kbeaconlib2`.
+No build-time warning surfaces the problem.
+
+The correct order, every time:
+
+1. `xcodegen generate` — produces `EchoAir.xcodeproj` from
+   `project.yml`.
+2. `pod install` — adds the `[CP] Embed Pods Frameworks` build phase
+   to `EchoAir.xcodeproj` and produces `EchoAir.xcworkspace`.
+3. Open **`EchoAir.xcworkspace`** for builds, never
+   `EchoAir.xcodeproj`. The workspace is what pulls in
+   `Pods.xcodeproj` alongside ours.
+
+If you edit `project.yml` and need to regenerate, re-run BOTH steps
+in order. The CocoaPods integration lives only in the generated
+`.xcodeproj` (the `[CP]` script phases + `Pods.xcodeproj` reference);
+xcodegen regenerates the `.xcodeproj` from scratch, blowing those
+registrations away. `pod install` is what re-adds them.
+
 ### Still deferred
 
 - Phase 3+: UI, DTOs, networking, AWB validation, IATA lookup,
