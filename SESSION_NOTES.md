@@ -116,6 +116,86 @@ defaults in `Shared.xcconfig` mean the build settings always resolve
 even on a fresh checkout, so the literal `$(SPIKE_DEVICE_MAC)` token
 never leaks into a built Info.plist.
 
+### Followup: bridge rewritten against verified SDK source
+
+User pasted kbeaconlib2 1.2.x source (KBeacon, KBeaconsMgr, KBConnPara,
+KBException, KBSensorType, KBRecordDataRsp, KBRecordHumidity,
+KBRecordInfoRsp, KBAuthHandler). `KBeaconBridge.swift` and
+`SpikeRunner.swift` rewritten against the verified API. Resolves PR #1
+flag #1 (unverified selectors) and flag #2 (throwing `discover(mac:)`
+stub).
+
+Material corrections from the speculative version:
+
+- **Connect path is delegate-based, not closure-based.** Handoff §1
+  said "closure-based callbacks, same shape as Android" — that's true
+  for read calls, but `connectEnhanced(_:timeout:connPara:delegate:)`
+  returns `Bool` synchronously and the connection lifecycle flows
+  through `ConnStateDelegate.onConnStateChange(_:state:evt:)`. Bridge
+  now conforms to `ConnStateDelegate`, captures a continuation in
+  `connect()`, resumes on terminal state. The SDK keeps its delegate
+  reference weak — no retain cycle from bridge owning beacon owning
+  weak-delegate-back-to-bridge.
+- **Cursor narrowed from `Int64` to `UInt32`.** SDK's
+  `INVALID_DATA_RECORD_POS = UInt32(4294967295)` and
+  `readDataNextPos: UInt32`. The §3.10 invariant "initial cursor 0,
+  NOT INVALID_DATA_RECORD_POS" still holds — just a narrower integer.
+- **Parameter labels:** `readSensorRecord(_:number:option:max:callback:)`.
+  Cursor is `number:`, batch size is `max:`. `sensorType` is `Int`
+  (`KBSensorType` is an NSObject class of static `Int` constants, not
+  an enum).
+- **Timeout is `Double` seconds (must be `> 3.0`), not `Int32` ms.**
+  Bridge converts internally so callers still pass milliseconds for
+  parity with Android's `CONNECT_TIMEOUT_MS = 20_000`.
+- **`KBConnPara` defaults are NOT §3.10 values.** SDK defaults
+  `syncUtcTime=true`, `readSlotPara=true`, `readTriggerPara=true`,
+  `readSensorPara=false`. Bridge explicitly overrides all five —
+  without overriding `readSensorPara`, sensor reads silently fail.
+- **Response accessors:** `rsp.readDataRspList: [NSObject]` (cast to
+  `[KBRecordHumidity]`), not `records`. `KBRecordHumidity` fields are
+  `utcTime: UInt32`, `temperature: Float`, `humidity: Float` —
+  narrower than my originally-speculated `Int64`/`Double`. `Reading`
+  struct now matches.
+- **Pre-call guards.** SDK silently returns `false` from
+  `connectEnhanced` on bad password length (must be 8–16) or
+  `timeout <= 3.0`, with no callback. Bridge throws `.requestRejected`
+  synchronously in those cases — otherwise the caller would await a
+  delegate callback that never fires.
+
+`SpikeRunner.discover(mac:)` wired against the real `KBeaconsMgr`:
+
+- `KBeaconsMgr.sharedBeaconManager` singleton, default scan filter
+  picks up KKM beacons (S23H included). Fallback to
+  `startScanningAllDevice()` available if a future device fails to
+  show up.
+- Pre-flight `centralBLEState == .PowerOn` check — without it,
+  `startScanning()` returns false silently on off/unauthorized, which
+  would look like "device not present."
+- `KBeaconMgrDelegate.onBeaconDiscovered(beacons:)` matches by
+  uppercase MAC equality. SDK formats MACs as `%02X:%02X:...`; target
+  is uppercased to defend against any alternative formatting paths.
+- 15s discovery ceiling via `Timer` — the SDK doesn't impose one.
+- `onCentralBleStateChange(newState:)` surfaces mid-scan BLE-off as a
+  discovery failure rather than a quiet hang.
+- Delegate methods are `nonisolated` and hop to `MainActor` via
+  `Task` — `KBeaconMgrDelegate` is `@objc` and the SDK may dispatch
+  from any queue, even though in practice CB callbacks land on main.
+
+Spike log lines now surface the four `KBRecordInfoRsp` accessors per
+your spec:
+
+- `sensorType` — should equal `KBSensorType.HTHumidity (0x2)`.
+- `totalRecordNumber` — non-zero confirms device has data; logged
+  alongside actual readings count for cross-check.
+- `unreadRecordNumber` — informational under NormalOrder.
+- `readInfoUtcSeconds` — logged with phone UTC at the same moment +
+  signed drift. Non-zero drift is the §3.10 `syncUtcTime=false`
+  evidence; human interprets based on how long the test device has
+  sat.
+
+PR #1 flag #3 (test credentials unfilled) stays unresolved by design —
+those live in the engineer's gitignored `Local.xcconfig`.
+
 ### Still deferred
 
 - Phase 3+: UI, DTOs, networking, AWB validation, IATA lookup,

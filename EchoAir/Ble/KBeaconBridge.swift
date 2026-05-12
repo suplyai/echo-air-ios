@@ -1,119 +1,135 @@
 import Foundation
 import kbeaconlib2
 
-// STATUS: SCAFFOLDED REMOTELY, NOT YET COMPILED.
+// SDK reference: github.com/kkmhogen/kbeaconlib2 (1.2.x), source verified.
+// Demo for usage patterns: github.com/kkmhogen/KBeaconProDemo_Ios — the
+// demo uses KBSensorReadOption.NewRecord; we use NormalOrder because Echo
+// Air devices are single-use and we always want full history (handoff §3.10).
 //
-// This file compiles only after `pod install` brings in kbeaconlib2 1.2.x
-// AND the engineer verifies the SDK selectors below against the installed
-// pod. Method signatures are best-effort against the API surface listed in
-// the Android repo's `docs/ios-port-handoff.md` §1; sites needing
-// confirmation are tagged `// TODO(spike): verify`.
+// Threading: the SDK's CoreBluetooth callbacks land on the main queue
+// (KBeaconsMgr inits CBCentralManager without a custom queue). The
+// ConnStateDelegate implementation below assumes single-threaded access
+// to `connectContinuation`. If SWIFT_STRICT_CONCURRENCY=complete flags
+// this file, the cheapest dial-back is to set strict concurrency to
+// `targeted` per Phase 1 SESSION_NOTES flag #2.
 //
-// What MUST stay correct regardless of selector spelling (handoff §3.10):
-//   • syncUtcTime = false       (preserve device clock drift for the
-//                                backend's `device_clock_offset_seconds`)
-//   • readCommPara = true       (MTU + common config at connect time)
-//   • readSensorPara = true     (required for sensor-history reads)
-//   • readTriggerPara = false   (not used by Echo Air)
-//   • readSlotPara    = false   (not used by Echo Air)
-//   • Sensor type     = HTHumidity (S23 + S23H both use this)
-//   • Read option     = NormalOrder (single-use devices, full history,
-//                                    do NOT advance the unread pointer)
-//   • Initial cursor  = 0 (Int64), NOT KBRecordDataRsp.INVALID_DATA_RECORD_POS
-//   • End-of-data sentinel = INVALID_DATA_RECORD_POS (returned by SDK
-//                                                    when no more records)
-//   • Batch size      = 200 records per readSensorRecord call
-//   • Connect timeout = 20_000 ms
-//
-// Reference (Android side): `BleConnectionManager.attemptDownload` Step 2
-// in suplyai/echo-air. The firmware quirk that makes initial cursor `0`
-// the only working value is documented in that file's long comment.
+// §3.10 invariants encoded structurally below — engineers calling this
+// bridge cannot accidentally drift on them:
+//   • KBSensorReadOption.NormalOrder   (read full history, leave unread pointer alone)
+//   • Initial cursor 0 (UInt32), NOT KBRecordDataRsp.INVALID_DATA_RECORD_POS
+//   • 200-record batch via `max:`
+//   • KBConnPara: syncUtcTime=false, readCommPara=true, readSensorPara=true,
+//     readTriggerPara=false, readSlotPara=false  (NOT the SDK's defaults —
+//     SDK defaults syncUtcTime=true and readSensorPara=false, both wrong for us)
+//   • KBSensorType.HTHumidity (Int = 0x2)
+//   • End-of-data via INVALID_DATA_RECORD_POS sentinel on rsp.readDataNextPos
+final class KBeaconBridge: NSObject {
+    enum BridgeError: Error, CustomStringConvertible {
+        case requestRejected
+        case connectFailed(KBConnEvtReason)
+        case readInfoFailed(KBException?)
+        case readRecordFailed(KBException?)
 
-@MainActor
-final class KBeaconBridge {
-    enum BridgeError: Error {
-        case notConnected
-        case connectFailed(Error?)
-        case readInfoFailed(Error?)
-        case readRecordFailed(Error?)
+        var description: String {
+            switch self {
+            case .requestRejected:
+                return "connectEnhanced rejected request — password must be 8-16 chars and timeout > 3s"
+            case .connectFailed(let reason):
+                return "connect failed: reason=\(reason)"
+            case .readInfoFailed(let error):
+                return "readSensorDataInfo failed: \(error?.errorDescription ?? "n/a")"
+            case .readRecordFailed(let error):
+                return "readSensorRecord failed: \(error?.errorDescription ?? "n/a")"
+            }
+        }
     }
 
-    /// One temperature/humidity sample. `humidity` is 0 / NaN on temp-only
-    /// S23 variants — the record class is shared with S23H.
-    struct Reading: Equatable {
-        let utcTime: Int64
-        let temperature: Double
-        let humidity: Double
+    /// One temperature/humidity sample. Types match the SDK's KBRecordHumidity
+    /// (utcTime UInt32, temperature/humidity Float). `humidity` is 0 / NaN on
+    /// temp-only S23 variants — the record class is shared with S23H.
+    struct Reading: Equatable, CustomStringConvertible {
+        let utcTime: UInt32
+        let temperature: Float
+        let humidity: Float
+
+        var description: String {
+            String(format: "utc=%u t=%.2f h=%.2f", utcTime, temperature, humidity)
+        }
     }
 
     private let beacon: KBeacon
+    private var connectContinuation: CheckedContinuation<Void, Error>?
 
     init(beacon: KBeacon) {
         self.beacon = beacon
+        super.init()
     }
 
-    /// Connect with the §3.10 connect parameters set explicitly. Treat the
-    /// param values here as load-bearing — flipping any of them changes
-    /// the data we collect or the device's RTC.
+    /// Connect with §3.10 parameters. Throws `.requestRejected` synchronously
+    /// if the SDK refuses (bad password length, timeout below 3s), otherwise
+    /// awaits the connection lifecycle through ConnStateDelegate.
     func connect(password: String, timeoutMs: Int = 20_000) async throws {
+        // SDK silently returns false from connectEnhanced if password isn't
+        // 8-16 chars or timeout isn't > 3s — no callback fires. Guard up
+        // front so callers throw rather than hang.
+        let timeoutSec = Double(timeoutMs) / 1000.0
+        guard password.count >= 8, password.count <= 16, timeoutSec > 3.0 else {
+            throw BridgeError.requestRejected
+        }
+
         let para = KBConnPara()
-        para.syncUtcTime = false
-        para.readCommPara = true
-        para.readSensorPara = true
+        para.syncUtcTime = false       // §3.10: preserve device clock drift
+        para.readCommPara = true       // MTU + common-cfg at connect time
+        para.readSensorPara = true     // SDK default is false; required for sensor reads
         para.readTriggerPara = false
         para.readSlotPara = false
 
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            // TODO(spike): verify exact connectEnhanced signature in 1.2.x.
-            // Closure shape is documented in handoff §1 as
-            // `(Bool, Response?, Exception?) -> Void` for read calls;
-            // connectEnhanced may instead deliver a state enum + error.
-            beacon.connectEnhanced(password, timeout: Int32(timeoutMs), connPara: para) { state, error in
-                if let error {
-                    cont.resume(throwing: BridgeError.connectFailed(error))
-                    return
-                }
-                if state == KBStateConnected {
-                    cont.resume(returning: ())
-                }
-                // Transient states (connecting, disconnecting) are noise
-                // here; only resolve on terminal states.
+            self.connectContinuation = cont
+            let accepted = beacon.connectEnhanced(
+                password,
+                timeout: timeoutSec,
+                connPara: para,
+                delegate: self
+            )
+            if !accepted {
+                self.connectContinuation = nil
+                cont.resume(throwing: BridgeError.requestRejected)
             }
+            // Otherwise the connect resolves via onConnStateChange below.
         }
     }
 
-    /// Read the device's sensor-data summary (record count, oldest /
-    /// newest cursors). Used by the spike to confirm the device has data.
-    func readSensorDataInfo() async throws -> KBSensorDataInfoRsp {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<KBSensorDataInfoRsp, Error>) in
-            // TODO(spike): verify call shape — likely
-            //   readSensorDataInfo(KBSensorType.HTHumidity, callback: { ... })
-            beacon.readSensorDataInfo(KBSensorType.HTHumidity) { success, response, error in
-                if !success || response == nil {
-                    cont.resume(throwing: BridgeError.readInfoFailed(error))
+    /// Reads the device's sensor-data summary: sensorType, totalRecordNumber,
+    /// unreadRecordNumber, readInfoUtcSeconds.
+    func readSensorDataInfo() async throws -> KBRecordInfoRsp {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<KBRecordInfoRsp, Error>) in
+            beacon.readSensorDataInfo(KBSensorType.HTHumidity) { result, infoRsp, error in
+                if result, let info = infoRsp {
+                    cont.resume(returning: info)
                 } else {
-                    cont.resume(returning: response!)
+                    cont.resume(throwing: BridgeError.readInfoFailed(error))
                 }
             }
         }
     }
 
-    /// One paged batch of records starting at `cursor`. End-of-data is
-    /// signalled by the SDK returning `INVALID_DATA_RECORD_POS` as the
-    /// next cursor — callers stop the loop on that sentinel.
-    func readNextPage(cursor: Int64, batchSize: Int = 200) async throws -> KBRecordDataRsp {
+    /// Reads one paged batch of records starting at `cursor`. End-of-data is
+    /// signalled by the SDK returning `INVALID_DATA_RECORD_POS` as the next
+    /// cursor — callers (or `readAllRecords` below) stop the loop on that
+    /// sentinel.
+    func readNextPage(cursor: UInt32, batchSize: Int = 200) async throws -> KBRecordDataRsp {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<KBRecordDataRsp, Error>) in
-            // TODO(spike): verify readSensorRecord parameter labels.
             beacon.readSensorRecord(
                 KBSensorType.HTHumidity,
+                number: cursor,
                 option: KBSensorReadOption.NormalOrder,
-                cursor: cursor,
-                count: Int32(batchSize)
-            ) { success, response, error in
-                if !success || response == nil {
-                    cont.resume(throwing: BridgeError.readRecordFailed(error))
+                max: batchSize
+            ) { result, recordRsp, error in
+                if result, let rsp = recordRsp {
+                    cont.resume(returning: rsp)
                 } else {
-                    cont.resume(returning: response!)
+                    cont.resume(throwing: BridgeError.readRecordFailed(error))
                 }
             }
         }
@@ -123,31 +139,61 @@ final class KBeaconBridge {
     /// spike's primary pass criterion: it must terminate, return non-zero
     /// readings from a real S23H, and never hang.
     func readAllRecords(batchSize: Int = 200) async throws -> [Reading] {
-        var cursor: Int64 = 0   // CRITICAL: 0, NOT INVALID_DATA_RECORD_POS.
-                                // KKM's own demo confirms; firmware quirk.
+        // CRITICAL (handoff §3.10): start at 0, NOT INVALID_DATA_RECORD_POS.
+        // KKM's own demo confirms; firmware quirk documented in Android
+        // BleConnectionManager.attemptDownload step 2.
+        var cursor: UInt32 = 0
         var readings: [Reading] = []
 
         while true {
             let rsp = try await readNextPage(cursor: cursor, batchSize: batchSize)
 
-            // TODO(spike): verify accessor names — likely `rsp.records`
-            // (typed as [KBRecordHumidity] for HTHumidity sensor) and
-            // `rsp.readDataNextPos` (Int64 cursor for the next page).
-            let page = (rsp.records as? [KBRecordHumidity]) ?? []
+            let page = (rsp.readDataRspList as? [KBRecordHumidity]) ?? []
             for record in page {
                 readings.append(Reading(
                     utcTime: record.utcTime,
-                    temperature: Double(record.temperature),
-                    humidity: Double(record.humidity)
+                    temperature: record.temperature,
+                    humidity: record.humidity
                 ))
             }
 
             let next = rsp.readDataNextPos
-            if next == KBRecordDataRsp.INVALID_DATA_RECORD_POS || next <= cursor {
-                break
+            if next == KBRecordDataRsp.INVALID_DATA_RECORD_POS {
+                break    // SDK end-of-data sentinel.
+            }
+            if next <= cursor {
+                break    // Defensive: cursor didn't advance, avoid an infinite loop.
             }
             cursor = next
         }
         return readings
+    }
+}
+
+extension KBeaconBridge: ConnStateDelegate {
+    func onConnStateChange(_ beacon: KBeacon, state: KBConnState, evt: KBConnEvtReason) {
+        guard let cont = connectContinuation else {
+            // Post-connect state change (e.g. unexpected disconnect during a
+            // read). The in-flight read's callback will fire with an error;
+            // we just log for visibility here.
+            print("[KBeaconBridge] post-connect state=\(state.rawValue) evt=\(evt.rawValue)")
+            return
+        }
+
+        switch state {
+        case .Connecting:
+            // Initial .ConnNull notification fires synchronously inside
+            // connectEnhanced — ignore, wait for a terminal state.
+            return
+        case .Connected:
+            connectContinuation = nil
+            cont.resume(returning: ())
+        case .Disconnecting, .Disconnected:
+            connectContinuation = nil
+            cont.resume(throwing: BridgeError.connectFailed(evt))
+        @unknown default:
+            connectContinuation = nil
+            cont.resume(throwing: BridgeError.connectFailed(evt))
+        }
     }
 }
