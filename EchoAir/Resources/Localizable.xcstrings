@@ -1,0 +1,1256 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "app_name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air" } }
+      }
+    },
+
+    "home_intro_primary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter an air waybill or container number, or scan any device QR code — we'll automatically identify and connect all devices in the shipment." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Introduce un número de guía aérea o de contenedor, o escanea el código QR de cualquier dispositivo — identificaremos y conectaremos automáticamente todos los dispositivos del envío." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "输入空运提单号或集装箱号，或扫描任意设备二维码 — 我们将自动识别并连接货运中的所有设备。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "航空運送状番号またはコンテナ番号を入力するか、デバイスのQRコードをスキャンしてください — 出荷内のすべてのデバイスを自動的に識別して接続します。" } }
+      }
+    },
+    "home_intro_positioning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stand close to the cargo where the device is attached, at the container door, or beside the ULD or pallets." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mantente cerca de la carga donde está colocado el dispositivo, en la puerta del contenedor, o junto al ULD o los palés." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "请靠近设备所在的货物、集装箱门口，或ULD或托盘旁边。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイスが取り付けられている貨物、コンテナのドア、またはULDやパレットの近くに立ってください。" } }
+      }
+    },
+    "home_action_awb_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter your air waybill number" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ingrese el número de su guía aérea" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "输入航空运单号" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "航空運送状番号を入力" } }
+      }
+    },
+    "home_action_awb_subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "On the cargo paperwork or label" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "En la documentación o etiqueta del envío" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "在货物文件或标签上" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "貨物書類またはラベルに記載" } }
+      }
+    },
+    "home_enter_container_number" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter your container number" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ingrese su número de contenedor" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "输入集装箱号" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "コンテナ番号を入力" } }
+      }
+    },
+    "home_enter_container_number_help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "From the paperwork or on the container itself" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "En la documentación o en el contenedor mismo" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "在文件或集装箱本体上" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "書類またはコンテナ本体に記載" } }
+      }
+    },
+    "home_scan_qr_button" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scan QR code of device" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Escanear código QR del dispositivo" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "扫描设备二维码" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイスのQRコードをスキャン" } }
+      }
+    },
+    "home_footer_no_account" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No account needed. Your data is only shared with parties on this shipment." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se necesita cuenta. Sus datos solo se comparten con las partes de este envío." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "无需账户。您的数据仅与本次货运的相关方共享。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アカウント不要。データはこの貨物の関係者とのみ共有されます。" } }
+      }
+    },
+    "home_hero_image_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "A warehouse operator standing in front of air cargo containers, holding a phone." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Un operador de almacén frente a contenedores de carga aérea, con un teléfono en la mano." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "一名仓库操作员手持手机站在航空货运集装箱前。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "倉庫作業員が航空貨物コンテナの前でスマートフォンを持って立っています。" } }
+      }
+    },
+    "home_language_selector_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Change language" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cambiar idioma" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "切换语言" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "言語を変更" } }
+      }
+    },
+
+    "settings_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ajustes" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "设置" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "設定" } }
+      }
+    },
+    "settings_language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Language" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Idioma" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "语言" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "言語" } }
+      }
+    },
+    "settings_debug_run_spike" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Run kbeaconlib2 spike (debug)" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ejecutar spike kbeaconlib2 (debug)" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "运行 kbeaconlib2 探针 (调试)" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "kbeaconlib2 スパイクを実行 (debug)" } }
+      }
+    },
+
+    "language_picker_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Language" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Idioma" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "语言" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "言語" } }
+      }
+    },
+    "language_name_en" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "English" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "English" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "English" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "English" } }
+      }
+    },
+    "language_name_es" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Español" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Español" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Español" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Español" } }
+      }
+    },
+    "language_name_zh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "简体中文" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "简体中文" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "简体中文" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "简体中文" } }
+      }
+    },
+    "language_name_ja" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "日本語" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "日本語" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "日本語" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "日本語" } }
+      }
+    },
+    "language_first_launch_set_to" : {
+      "comment" : "%1$@ = native name of detected language (e.g. \"Español\")",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "We've set your language to %1$@." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Hemos configurado el idioma en %1$@." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "已将语言设置为 %1$@。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "言語を %1$@ に設定しました。" } }
+      }
+    },
+    "language_first_launch_question" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Is this correct?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Es correcto?" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "是否正确?" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "この設定でよろしいですか?" } }
+      }
+    },
+    "language_first_launch_yes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Yes, continue" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sí, continuar" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "正确,继续" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "はい、続行" } }
+      }
+    },
+    "language_first_launch_change" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Change language" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cambiar idioma" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "更改语言" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "言語を変更" } }
+      }
+    },
+
+    "capture_title_qr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Scan device QR" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Escanear QR del dispositivo" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "扫描设备二维码" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイス QR をスキャン" } }
+      }
+    },
+    "capture_permission_grant" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Grant camera permission" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Conceder permiso de cámara" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "授予相机权限" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "カメラ権限を許可" } }
+      }
+    },
+
+    "awb_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter AWB" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ingresar AWB" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "输入运单号" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AWB を入力" } }
+      }
+    },
+    "awb_heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter the 11-digit air waybill number" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ingresa el número de guía aérea (AWB) de 11 dígitos" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "请输入 11 位航空运单号 (AWB)" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "11 桁の航空運送状番号 (AWB) を入力してください" } }
+      }
+    },
+    "awb_subheading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "3-digit airline prefix, then 8-digit serial." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Prefijo de aerolínea de 3 dígitos, luego serial de 8 dígitos." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "3 位航空公司前缀,然后是 8 位流水号。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "航空会社コード 3 桁、続けて連番 8 桁。" } }
+      }
+    },
+    "awb_unknown_prefix" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unknown airline prefix." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Prefijo de aerolínea desconocido." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "未知的航空公司前缀。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "不明な航空会社コードです。" } }
+      }
+    },
+    "awb_check_digit_mismatch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Check digit doesn't match — double-check the last digit." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El dígito de control no coincide — revisa el último dígito." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "校验位不匹配 — 请核对最后一位。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "チェックディジットが一致しません — 最後の桁を確認してください。" } }
+      }
+    },
+    "awb_check_digit_mismatch_expected" : {
+      "comment" : "%1$lld = expected check digit (0-6)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Check digit doesn't match — double-check the last digit (expected %1$lld)." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El dígito de control no coincide — revisa el último dígito (se esperaba %1$lld)." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "校验位不匹配 — 请核对最后一位 (应为 %1$lld)。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "チェックディジットが一致しません — 最後の桁を確認してください (正しい値: %1$lld)。" } }
+      }
+    },
+    "awb_continue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Continuar" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "继续" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "続行" } }
+      }
+    },
+    "awb_continue_loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Looking up shipment…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscando envío…" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "正在查找货运…" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "貨物を検索中…" } }
+      }
+    },
+
+    "container_entry_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter container number" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ingresar contenedor" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "输入集装箱号" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "コンテナ番号を入力" } }
+      }
+    },
+    "container_entry_heading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter the 11-character container number" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ingresa el número de contenedor de 11 caracteres" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "请输入 11 位集装箱号" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "11 文字のコンテナ番号を入力してください" } }
+      }
+    },
+    "container_entry_subheading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "4-letter owner code, 6-digit serial, 1-digit check." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Código de propietario de 4 letras, serie de 6 dígitos, dígito de control." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "4 位所有者代码,6 位序列号,1 位校验码。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "所有者コード 4 文字、シリアル 6 桁、チェックディジット 1 桁。" } }
+      }
+    },
+    "container_entry_placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "ABCDU1234567" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "ABCDU1234567" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "ABCDU1234567" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ABCDU1234567" } }
+      }
+    },
+    "container_entry_validation_format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Container numbers are 4 letters followed by 7 digits." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los números de contenedor son 4 letras seguidas de 7 dígitos." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "集装箱号为 4 个字母后跟 7 位数字。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "コンテナ番号はアルファベット 4 文字と数字 7 桁です。" } }
+      }
+    },
+    "container_entry_validation_checkdigit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Check digit doesn't match — double-check the last digit." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El dígito de control no coincide — revisa el último dígito." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "校验位不匹配 — 请核对最后一位。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "チェックディジットが一致しません — 最後の桁を確認してください。" } }
+      }
+    },
+    "container_entry_validation_checkdigit_expected" : {
+      "comment" : "%1$lld = expected ISO 6346 check digit",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Check digit doesn't match — double-check the last digit (expected %1$lld)." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El dígito de control no coincide — revisa el último dígito (se esperaba %1$lld)." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "校验位不匹配 — 请核对最后一位 (应为 %1$lld)。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "チェックディジットが一致しません — 最後の桁を確認してください (正しい値: %1$lld)。" } }
+      }
+    },
+
+    "confirm_heading_low_confidence" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Double-check this is your shipment" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Verifica que este sea tu envío" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "请确认这是您的货运" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "この貨物で間違いないかご確認ください" } }
+      }
+    },
+    "confirm_fallback_commodity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shipment" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Envío" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "货运" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "貨物" } }
+      }
+    },
+    "confirm_label_air_waybill" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Air Waybill" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Guía Aérea (AWB)" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "航空运单 (AWB)" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "航空運送状 (AWB)" } }
+      }
+    },
+    "confirm_label_container_number" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Container Number" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Número de contenedor" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "集装箱号" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "コンテナ番号" } }
+      }
+    },
+    "confirm_badge_air_freight" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Air freight" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Carga aérea" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "空运" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "航空貨物" } }
+      }
+    },
+    "confirm_badge_ocean_reefer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Ocean reefer" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Reefer marítimo" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "海运冷藏" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "海上冷蔵" } }
+      }
+    },
+    "confirm_no_devices_expected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No devices expected" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin dispositivos esperados" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "无需收集设备" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "収集対象のデバイスはありません" } }
+      }
+    },
+    "confirm_devices_to_collect" : {
+      "comment" : "Plural. %1$lld = total device count.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one"   : { "stringUnit" : { "state" : "translated", "value" : "1 device to collect" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld devices to collect" } }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one"   : { "stringUnit" : { "state" : "translated", "value" : "1 dispositivo por recolectar" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld dispositivos por recolectar" } }
+            }
+          }
+        },
+        "zh" : {
+          "variations" : {
+            "plural" : {
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "需要收集 %1$lld 个设备" } }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "収集対象 %1$lld 台" } }
+            }
+          }
+        }
+      }
+    },
+    "confirm_start_scanning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start scanning" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Comenzar escaneo" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "开始扫描" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "スキャン開始" } }
+      }
+    },
+    "common_cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "取消" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "キャンセル" } }
+      }
+    },
+
+    "system_bluetooth_off_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bluetooth is off" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El Bluetooth está desactivado" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "蓝牙已关闭" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Bluetoothがオフです" } }
+      }
+    },
+    "system_bluetooth_off_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bluetooth is required to collect device data. Please enable it to continue." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Se requiere Bluetooth para recolectar datos de los dispositivos. Actívalo para continuar." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "收集设备数据需要使用蓝牙。请启用蓝牙以继续。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイスデータの収集にはBluetoothが必要です。続行するには有効にしてください。" } }
+      }
+    },
+    "system_bluetooth_enable_action" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enable Bluetooth" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Activar Bluetooth" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "启用蓝牙" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Bluetoothを有効にする" } }
+      }
+    },
+    "system_location_off_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Location services are off" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los servicios de ubicación están desactivados" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "位置服务已关闭" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "位置情報サービスがオフです" } }
+      }
+    },
+    "system_location_off_body" : {
+      "comment" : "Android-specific copy — kept verbatim from canonical Android strings.xml. iOS Phase 5 reactive gates may introduce a parallel iOS-appropriate key.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Location services are required for Bluetooth scanning on Android. Please enable them to continue." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los servicios de ubicación son necesarios para el escaneo Bluetooth en Android. Actívalos para continuar." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Android 蓝牙扫描需要位置服务。请启用以继续。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AndroidのBluetoothスキャンには位置情報サービスが必要です。続行するには有効にしてください。" } }
+      }
+    },
+    "system_location_enable_action" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Location Settings" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Abrir ajustes de ubicación" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "打开位置设置" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "位置情報の設定を開く" } }
+      }
+    },
+    "common_ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "确定" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }
+      }
+    },
+
+    "collection_title_fallback" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Collecting" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Recolectando" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "正在收集" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "収集中" } }
+      }
+    },
+    "collection_header_collected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Collected" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Recolectados" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "已收集" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "収集済み" } }
+      }
+    },
+    "collection_header_of" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "of" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "de" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "/" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "/" } }
+      }
+    },
+    "collection_state_searching" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Searching" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscando" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "正在搜索" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "検索中" } }
+      }
+    },
+    "collection_state_in_range" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "In range" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "En rango" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "在范围内" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "範囲内" } }
+      }
+    },
+    "collection_state_connecting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Connecting…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Conectando…" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "连接中…" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "接続中…" } }
+      }
+    },
+    "collection_state_syncing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Syncing" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sincronizando" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "同步中" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "同期中" } }
+      }
+    },
+    "collection_state_finalising" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Finalising…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Finalizando…" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "完成中…" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最終処理中…" } }
+      }
+    },
+    "collection_state_collected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Collected" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Recolectado" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "已收集" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "収集完了" } }
+      }
+    },
+    "collection_state_missing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Not detected" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No detectado" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "未检测到" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "検出されません" } }
+      }
+    },
+    "collection_state_error" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Connection failed" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Conexión fallida" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "连接失败" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "接続に失敗しました" } }
+      }
+    },
+    "collection_state_syncing_with_percent" : {
+      "comment" : "%1$lld = integer percent. Trailing %% is a literal percent sign.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Syncing  %1$lld%%" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sincronizando  %1$lld%%" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "同步中  %1$lld%%" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "同期中  %1$lld%%" } }
+      }
+    },
+    "collection_row_retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Reintentar" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "重试" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "再試行" } }
+      }
+    },
+    "collection_row_device_id" : {
+      "comment" : "%1$@ = device id, do NOT translate the id itself",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Device %1$@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Dispositivo %1$@" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "设备 %1$@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイス %1$@" } }
+      }
+    },
+    "collection_alarm_on_device" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Alarm on device" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Alarma en el dispositivo" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "设备已触发告警" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイスでアラームが発生" } }
+      }
+    },
+    "collection_hint_ambient" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hold your phone near the shipment." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Acerca tu teléfono al envío." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "请将手机靠近货运。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "スマートフォンを貨物に近づけてください。" } }
+      }
+    },
+    "collection_hint_get_closer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move closer — devices are usually inside the ULD." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Acércate — los dispositivos suelen estar dentro del ULD." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "请靠近 — 设备通常在 ULD 内部。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "近づいてください — デバイスは通常 ULD 内にあります。" } }
+      }
+    },
+    "collection_hint_check_device" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Still searching. Check the device is inside the cargo and powered." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Aún buscando. Verifica que el dispositivo esté dentro de la carga y encendido." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "仍在搜索。请确认设备位于货物内部并已上电。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "検索中です。デバイスが貨物内にあり電源が入っていることをご確認ください。" } }
+      }
+    },
+    "collection_hint_contact_shipper" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Can't find this device. Contact your shipper if it may be missing." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se encuentra este dispositivo. Contacta al remitente si crees que puede faltar." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "未找到此设备。如认为可能缺失，请联系发货方。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このデバイスが見つかりません。紛失の可能性がある場合は荷主にご連絡ください。" } }
+      }
+    },
+    "collection_finish" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All devices collected — finish" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Todos los dispositivos recolectados — finalizar" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "所有设备已收集 — 完成" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "全デバイスの収集完了 — 終了" } }
+      }
+    },
+    "collection_finding_devices" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Finding devices…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscando dispositivos…" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "正在查找设备…" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイスを検索中…" } }
+      }
+    },
+    "collection_collecting_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Collecting…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Recolectando…" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "正在收集…" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "収集中…" } }
+      }
+    },
+    "collection_collecting_n_of_m" : {
+      "comment" : "Plural. %1$lld = collected count, %2$lld = total count. Note Japanese reverses positional args (Y of X grammar).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one"   : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one"   : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } }
+            }
+          }
+        },
+        "zh" : {
+          "variations" : {
+            "plural" : {
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "已收集 %1$lld / %2$lld" } }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%2$lld 台中 %1$lld 台収集済み" } }
+            }
+          }
+        }
+      }
+    },
+    "collection_close_partial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Close shipment without remaining devices" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cerrar envío sin los dispositivos restantes" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "关闭货运并忽略剩余设备" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "残りのデバイスを含めずに貨物を終了" } }
+      }
+    },
+
+    "confirm_mps_badge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Multiple Package Shipment (MPS)" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Envío de múltiples paquetes (MPS)" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "多包装件货运 (MPS)" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "複数個口貨物 (MPS)" } }
+      }
+    },
+    "confirm_mps_summary" : {
+      "comment" : "%1$lld = unit count, %2$lld = total device count",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld units · %2$lld devices total" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld unidades · %2$lld dispositivos en total" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld 个单元 · 共 %2$lld 台设备" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld ユニット · 合計 %2$lld 台" } }
+      }
+    },
+    "collection_unit_progress" : {
+      "comment" : "Plural. %1$lld = collected on this unit, %2$lld = total on this unit. Japanese reverses positional args.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one"   : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one"   : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } }
+            }
+          }
+        },
+        "zh" : {
+          "variations" : {
+            "plural" : {
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "已收集 %1$lld / %2$lld" } }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%2$lld 台中 %1$lld 台収集済み" } }
+            }
+          }
+        }
+      }
+    },
+    "collection_unattributed_unit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unattributed" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin atribuir" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "未归属" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "未割当" } }
+      }
+    },
+    "collection_close_dialog_title_finish" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Finish shipment?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Finalizar envío?" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "完成此次货运?" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "貨物を終了しますか?" } }
+      }
+    },
+    "collection_close_dialog_title_partial" : {
+      "comment" : "Plural. %1$lld = remaining-device count.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one"   : { "stringUnit" : { "state" : "translated", "value" : "Close without 1 device?" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "Close without %1$lld devices?" } }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one"   : { "stringUnit" : { "state" : "translated", "value" : "¿Cerrar sin 1 dispositivo?" } },
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "¿Cerrar sin %1$lld dispositivos?" } }
+            }
+          }
+        },
+        "zh" : {
+          "variations" : {
+            "plural" : {
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "未收集 %1$lld 个设备就关闭?" } }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld 台未収集のまま終了しますか?" } }
+            }
+          }
+        }
+      }
+    },
+    "collection_close_dialog_body_partial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Missing devices will be recorded in the attestation pack." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los dispositivos faltantes se registrarán en el paquete de atestación." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "未收集的设备将被记录在证明文件中。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "未収集のデバイスは証明書パックに記録されます。" } }
+      }
+    },
+    "collection_close_dialog_body_all" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All expected devices have been collected." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Se han recolectado todos los dispositivos esperados." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "所有预期设备均已收集完毕。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "予定されていた全デバイスを収集しました。" } }
+      }
+    },
+    "collection_close_dialog_confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Close shipment" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cerrar envío" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "关闭货运" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "貨物を終了" } }
+      }
+    },
+
+    "location_rationale_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Attach location to each scan?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Adjuntar ubicación a cada escaneo?" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "是否为每次扫描附加位置?" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "各スキャンに位置情報を付与しますか?" } }
+      }
+    },
+    "location_rationale_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air attaches the scan location to the shipment's audit trail, so the timeline shows where each device was scanned. Your location is only captured when you scan a device." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air adjunta la ubicación del escaneo al registro del envío, para que la línea de tiempo muestre dónde se escaneó cada dispositivo. Tu ubicación solo se captura cuando escaneas un dispositivo." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air 会将扫描位置附加到货运的审计记录，以便时间线显示每台设备的扫描地点。仅在您扫描设备时捕获位置。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air はスキャン位置を貨物の監査記録に付与し、各デバイスがどこでスキャンされたかをタイムラインに表示します。位置情報はデバイスをスキャンした瞬間のみ取得されます。" } }
+      }
+    },
+    "location_rationale_accept" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Permitir" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "允许" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "許可" } }
+      }
+    },
+    "location_rationale_decline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Not now" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ahora no" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "暂不" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "後で" } }
+      }
+    },
+
+    "failure_unreachable_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Can't reach Suply servers" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se puede conectar con los servidores de Suply" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "无法连接到 Suply 服务器" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Suply サーバーに接続できません" } }
+      }
+    },
+    "failure_unreachable_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Check your internet connection, then try again." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Revisa tu conexión a internet e intenta nuevamente." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "请检查网络连接后重试。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "インターネット接続を確認してから再試行してください。" } }
+      }
+    },
+    "failure_timeout_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Suply servers aren't responding" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Los servidores de Suply no responden" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Suply 服务器未响应" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Suply サーバーが応答しません" } }
+      }
+    },
+    "failure_timeout_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This usually clears up after a few seconds. Try again." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Esto suele resolverse en pocos segundos. Intenta nuevamente." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "通常几秒钟后即可恢复。请重试。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通常は数秒で解消します。再試行してください。" } }
+      }
+    },
+    "failure_server_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Something went wrong" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Algo salió mal" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "出错了" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "エラーが発生しました" } }
+      }
+    },
+    "failure_server_body_with_code" : {
+      "comment" : "%1$lld = HTTP status code (e.g. 500, 503)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Suply returned an error (HTTP %1$lld). Try again in a moment, or contact your shipper if it keeps happening." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Suply devolvió un error (HTTP %1$lld). Intenta nuevamente en un momento o contacta a tu embarcador si persiste." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Suply 返回了错误 (HTTP %1$lld)。请稍后重试;如问题持续,请联系发货人。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Suply がエラーを返しました (HTTP %1$lld)。しばらく経ってから再試行するか、解消しない場合は荷送人にご連絡ください。" } }
+      }
+    },
+    "failure_server_body_unknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unexpected error. Try again in a moment." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Error inesperado. Intenta nuevamente en un momento." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "发生未知错误。请稍后重试。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "予期しないエラーが発生しました。しばらく経ってから再試行してください。" } }
+      }
+    },
+    "failure_malformed_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unexpected response from Suply" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Respuesta inesperada de Suply" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Suply 返回了意外的响应" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Suply から想定外のレスポンス" } }
+      }
+    },
+    "failure_malformed_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The server responded in a shape the app didn't recognise — usually means the backend was updated without the app catching up. Ask your shipper to check the deployment." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El servidor respondió con un formato que la app no reconoce — normalmente significa que el backend se actualizó sin que la app se actualizara también. Pide a tu embarcador que revise el despliegue." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "服务器返回的数据格式应用无法识别 — 通常意味着后端已更新但应用尚未同步。请联系发货人检查部署。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "サーバーの応答形式をアプリが認識できません — 通常はバックエンドが更新されたがアプリが追従していないことを意味します。荷送人にデプロイの確認を依頼してください。" } }
+      }
+    },
+    "failure_no_shipment_for_awb_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No active shipment found" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se encontró un envío activo" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "未找到进行中的货运" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "進行中の貨物が見つかりません" } }
+      }
+    },
+    "failure_no_shipment_for_awb_body" : {
+      "comment" : "%1$@ = AWB number, do not translate",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No active shipment was found for AWB %1$@. Double-check the number, or if the shipment has already been completed, contact your shipper." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se encontró un envío activo para el AWB %1$@. Verifica el número; si el envío ya se completó, contacta a tu embarcador." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "未找到对应 AWB %1$@ 的进行中货运。请核对运单号;如果货运已完成,请联系发货人。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AWB %1$@ に対応する進行中の貨物が見つかりません。番号を再確認してください。すでに完了している場合は荷送人にご連絡ください。" } }
+      }
+    },
+    "failure_no_shipment_for_container_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No active shipment found" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se encontró un envío activo" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "未找到进行中的货运" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "進行中の貨物が見つかりません" } }
+      }
+    },
+    "failure_no_shipment_for_container_body" : {
+      "comment" : "%1$@ = container number, do not translate",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No active shipment was found for container %1$@. Double-check the number, or if the shipment has already been completed, contact your shipper." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se encontró un envío activo para el contenedor %1$@. Verifica el número; si el envío ya se completó, contacta a tu embarcador." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "未找到对应集装箱 %1$@ 的进行中货运。请核对箱号;如果货运已完成,请联系发货人。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "コンテナ %1$@ に対応する進行中の貨物が見つかりません。番号を再確認してください。すでに完了している場合は荷送人にご連絡ください。" } }
+      }
+    },
+    "failure_no_awb_in_image_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't read the AWB" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo leer el AWB" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "无法识别 AWB" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AWB を読み取れませんでした" } }
+      }
+    },
+    "failure_no_awb_in_image_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Try another angle or better lighting, or scan the device QR code instead." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Prueba con otro ángulo o mejor iluminación, o escanea el QR del dispositivo." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "请换一个角度或改善光线,或改为扫描设备二维码。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "角度や照明を変えて再試行するか、デバイスの QR コードをスキャンしてください。" } }
+      }
+    },
+    "failure_device_not_registered_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Device not registered" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Dispositivo no registrado" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "设备未注册" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイスが未登録です" } }
+      }
+    },
+    "failure_device_not_registered_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This Echo Air device isn't registered in the system. Contact your shipper." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Este dispositivo Echo Air no está registrado en el sistema. Contacta a tu embarcador." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "此 Echo Air 设备未在系统中注册。请联系发货人。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "この Echo Air デバイスはシステムに登録されていません。荷送人にご連絡ください。" } }
+      }
+    },
+    "failure_device_not_assigned_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Device not on an active shipment" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Dispositivo sin envío activo" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "设备未绑定到进行中的货运" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイスが進行中の貨物に紐づいていません" } }
+      }
+    },
+    "failure_device_not_assigned_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This device is registered but isn't currently assigned to an active shipment. Contact your shipper." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Este dispositivo está registrado pero no está asignado a un envío activo. Contacta a tu embarcador." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "此设备已注册,但当前未绑定到进行中的货运。请联系发货人。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このデバイスは登録済みですが、現在進行中の貨物に紐づいていません。荷送人にご連絡ください。" } }
+      }
+    },
+    "failure_unrecognised_qr_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unrecognised QR code" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Código QR no reconocido" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "无法识别的二维码" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "認識できない QR コード" } }
+      }
+    },
+    "failure_unrecognised_qr_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Make sure you're scanning the QR label printed on an Echo Air device." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Asegúrate de estar escaneando la etiqueta QR impresa en un dispositivo Echo Air." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "请确认您正在扫描 Echo Air 设备上印刷的二维码。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air デバイスに印刷された QR ラベルをスキャンしていることを確認してください。" } }
+      }
+    },
+    "failure_debug_detail_suffix" : {
+      "comment" : "Debug-only detail appended to failure body. %1$@ = exception info. Visible only in DEBUG builds.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "\n\n[debug] %1$@" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "\n\n[debug] %1$@" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "\n\n[debug] %1$@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "\n\n[debug] %1$@" } }
+      }
+    },
+
+    "permission_camera_rationale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air needs camera access to identify shipments from their documents." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air necesita acceso a la cámara para identificar envíos desde sus documentos." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air 需要相机权限以通过单据识别货运。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air は書類から貨物を識別するためにカメラへのアクセスを必要とします。" } }
+      }
+    },
+    "permission_ble_rationale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air needs Bluetooth permission to collect data from shipment loggers." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air necesita permiso de Bluetooth para recolectar datos de los registradores del envío." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air 需要蓝牙权限以从货运记录器中收集数据。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Echo Air は貨物ロガーからデータを収集するために Bluetooth 権限を必要とします。" } }
+      }
+    },
+    "permission_location_rationale" : {
+      "comment" : "Android-specific copy — references Android by name. iOS will introduce a parallel iOS-appropriate key in Phase 5 if needed; this stays unused on iOS.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Android requires location permission before it will scan for Bluetooth devices. Some phone manufacturers (Honor, Huawei, Xiaomi) require this even on newer Android versions. Echo Air does not read or use your location itself." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Android requiere permiso de ubicación antes de escanear dispositivos Bluetooth. Algunos fabricantes (Honor, Huawei, Xiaomi) lo exigen incluso en versiones recientes de Android. Echo Air no lee ni utiliza tu ubicación." } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "Android 在扫描蓝牙设备前需要位置权限。部分厂商 (荣耀、华为、小米) 即使在较新版本上也强制要求此权限。Echo Air 不会读取或使用您的位置。" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Android は Bluetooth デバイスをスキャンする前に位置情報の許可を要求します。一部メーカー (Honor、Huawei、Xiaomi) では新しい Android バージョンでもこれを要求します。Echo Air は位置情報自体を読み取ったり使用したりすることはありません。" } }
+      }
+    },
+
+    "spike_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "kbeaconlib2 spike" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Spike kbeaconlib2" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "kbeaconlib2 探针" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "kbeaconlib2 スパイク" } }
+      }
+    },
+    "spike_field_mac_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Device MAC (BC:57:29:1C:D6:A6)" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "MAC del dispositivo (BC:57:29:1C:D6:A6)" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "设备 MAC (BC:57:29:1C:D6:A6)" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "デバイス MAC (BC:57:29:1C:D6:A6)" } }
+      }
+    },
+    "spike_field_password_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Password" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Contraseña" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "密码" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "パスワード" } }
+      }
+    },
+    "spike_run" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Run spike" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ejecutar spike" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "运行探针" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "スパイクを実行" } }
+      }
+    },
+    "spike_log_output" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Log output" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Registro" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "日志输出" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ログ出力" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}
