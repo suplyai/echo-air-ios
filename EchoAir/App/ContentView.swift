@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var captureVM = CaptureViewModel()
+    @StateObject private var localization = LocalizationController.shared
     @State private var navPath: [AppDestination] = []
     @State private var showLanguagePicker = false
 
@@ -10,7 +11,7 @@ struct ContentView: View {
             HomeView(
                 path: $navPath,
                 showLanguagePicker: $showLanguagePicker,
-                currentLocale: LocaleManager.effectiveLocale()
+                currentLocale: localization.currentLocale
             )
             .navigationDestination(for: AppDestination.self) { dest in
                 switch dest {
@@ -42,13 +43,21 @@ struct ContentView: View {
                 }
             }
         }
+        // Force the entire NavigationStack subtree to re-init on language
+        // change. SwiftUI re-evaluates view bodies — and therefore re-
+        // looks up `Text(LocalizedStringKey)` values via the swapped
+        // `Bundle.main` — giving immediate (in-session) translation.
+        // Trade-off: @State below this point resets, so if the user is
+        // mid-entry on AwbEntryView when they change language, their
+        // typed digits clear. Acceptable: language switches are rare,
+        // and the alternative (custom LocalizedText view across every
+        // string site) is a whole-codebase refactor for the same end.
+        .id(localization.currentLocale.tag)
         .sheet(isPresented: $showLanguagePicker) {
             LanguagePickerView(
                 onSelect: { locale in
-                    LocaleManager.apply(locale)
+                    localization.applyLanguage(locale)
                     showLanguagePicker = false
-                    // UI continues in current bundle until next launch;
-                    // documented limitation in LocaleManager.
                 },
                 onDismiss: { showLanguagePicker = false }
             )

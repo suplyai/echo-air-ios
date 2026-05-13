@@ -8,15 +8,11 @@ import SwiftUI
 /// User flow:
 ///   • "Yes, continue" → apply detected, mark confirmed → content.
 ///   • "Change language" → open `LanguagePickerView` → user picks →
-///     apply chosen, mark confirmed → content.
-///
-/// **iOS limitation**: if the user picks a language different from the
-/// detected one at first launch, the current session keeps rendering in
-/// the detected language; the chosen language only takes effect on the
-/// next launch. iOS doesn't gracefully support runtime locale changes
-/// for `NSLocalizedString`. Documented in `LocaleManager.swift`. Phase
-/// 5+ may introduce a custom Bundle wrapper if pilot feedback shows
-/// this is friction.
+///     apply chosen, mark confirmed → content. The chosen language
+///     takes effect immediately — `LocalizationController.applyLanguage`
+///     swaps `Bundle.main` and publishes, so the gate's parent view
+///     (`ContentView`) re-renders into the new language without a
+///     relaunch.
 struct FirstLaunchLanguageGate<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
@@ -38,7 +34,7 @@ struct FirstLaunchLanguageGate<Content: View>: View {
                 isPresented: $showAlert
             ) {
                 Button(String(localized: "language_first_launch_yes")) {
-                    LocaleManager.apply(detected)
+                    LocalizationController.shared.applyLanguage(detected)
                     LocaleManager.markFirstLaunchConfirmed()
                 }
                 Button(String(localized: "language_first_launch_change")) {
@@ -58,7 +54,7 @@ struct FirstLaunchLanguageGate<Content: View>: View {
             .sheet(isPresented: $showPicker) {
                 LanguagePickerView(
                     onSelect: { locale in
-                        LocaleManager.apply(locale)
+                        LocalizationController.shared.applyLanguage(locale)
                         LocaleManager.markFirstLaunchConfirmed()
                         showPicker = false
                     },

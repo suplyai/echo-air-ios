@@ -3,11 +3,15 @@ import SwiftUI
 @main
 struct EchoAirApp: App {
     init() {
-        // Must run BEFORE any SwiftUI view body evaluates so the first
-        // frame is in the right language. No-op on first launch (no
-        // stored choice yet) — the system locale is used until the
-        // first-launch gate confirms.
+        // Persistence-layer restore — writes the stored choice (if any)
+        // into AppleLanguages so cold-start NSLocalizedString resolves
+        // correctly even before the bundle override is installed.
         LocaleManager.restore()
+        // Force LocalizationController.shared to initialise NOW (its
+        // init installs `Bundle.installLanguageOverride` for the
+        // effective locale) BEFORE any SwiftUI view body evaluates, so
+        // the first frame already renders in the chosen language.
+        _ = LocalizationController.shared
         // Warm the IATA prefix cache so the first user keystroke on
         // the AWB prefix field hits a loaded map.
         IataCarriers.warmup()
