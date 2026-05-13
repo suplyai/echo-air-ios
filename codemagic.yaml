@@ -1,0 +1,43 @@
+workflows:
+  ios-testflight:
+    name: iOS TestFlight Build
+
+    environment:
+      xcode: latest
+
+      vars:
+        XCODE_WORKSPACE: "EchoAir.xcworkspace"
+        XCODE_SCHEME: "EchoAir"
+        BUNDLE_ID: "app.suply.echoair"
+
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.suply.echoair
+
+      groups:
+        - app_store_credentials
+
+    integrations:
+      app_store_connect: Codemagic
+
+    scripts:
+      - name: Install CocoaPods
+        script: |
+          pod install
+
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+
+        submit_to_testflight: true
+        submit_to_app_store: false
