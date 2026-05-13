@@ -1,5 +1,5 @@
 import Foundation
-import kbeaconlib2
+@preconcurrency import kbeaconlib2
 
 // SDK reference: github.com/kkmhogen/kbeaconlib2 (1.2.x), source verified.
 // Demo for usage patterns: github.com/kkmhogen/KBeaconProDemo_Ios — the
@@ -9,9 +9,15 @@ import kbeaconlib2
 // Threading: the SDK's CoreBluetooth callbacks land on the main queue
 // (KBeaconsMgr inits CBCentralManager without a custom queue). The
 // ConnStateDelegate implementation below assumes single-threaded access
-// to `connectContinuation`. If SWIFT_STRICT_CONCURRENCY=complete flags
-// this file, the cheapest dial-back is to set strict concurrency to
-// `targeted` per Phase 1 SESSION_NOTES flag #2.
+// to `connectContinuation`.
+//
+// Swift 6 strict-concurrency: kbeaconlib2 is imported `@preconcurrency`
+// since the SDK predates Sendable annotations. The boundary types we
+// pass across `async` boundaries — `SensorInfo`, `RecordPage`, `Reading`
+// — are pure Sendable value types built INSIDE the SDK's callback queue
+// from the SDK's non-Sendable response objects, so the data crossing
+// `await` is always Sendable. `BridgeError` likewise carries only
+// `String`s (no SDK exception types as associated values).
 //
 // §3.10 invariants encoded structurally below — engineers calling this
 // bridge cannot accidentally drift on them:
@@ -26,9 +32,14 @@ import kbeaconlib2
 final class KBeaconBridge: NSObject {
     enum BridgeError: Error, CustomStringConvertible {
         case requestRejected
-        case connectFailed(KBConnEvtReason)
-        case readInfoFailed(KBException?)
-        case readRecordFailed(KBException?)
+        /// `reason` is `String(describing:)` of the SDK's `KBConnEvtReason`
+        /// captured at the failure site — we don't carry SDK enum types
+        /// across the `async` boundary.
+        case connectFailed(reason: String)
+        /// `detail` is the SDK exception's `errorDescription` captured at
+        /// the failure site.
+        case readInfoFailed(detail: String?)
+        case readRecordFailed(detail: String?)
 
         var description: String {
             switch self {
@@ -36,10 +47,10 @@ final class KBeaconBridge: NSObject {
                 return "connectEnhanced rejected request — password must be 8-16 chars and timeout > 3s"
             case .connectFailed(let reason):
                 return "connect failed: reason=\(reason)"
-            case .readInfoFailed(let error):
-                return "readSensorDataInfo failed: \(error?.errorDescription ?? "n/a")"
-            case .readRecordFailed(let error):
-                return "readSensorRecord failed: \(error?.errorDescription ?? "n/a")"
+            case .readInfoFailed(let detail):
+                return "readSensorDataInfo failed: \(detail ?? "n/a")"
+            case .readRecordFailed(let detail):
+                return "readSensorRecord failed: \(detail ?? "n/a")"
             }
         }
     }
@@ -47,7 +58,8 @@ final class KBeaconBridge: NSObject {
     /// One temperature/humidity sample. Types match the SDK's KBRecordHumidity
     /// (utcTime UInt32, temperature/humidity Float). `humidity` is 0 / NaN on
     /// temp-only S23 variants — the record class is shared with S23H.
-    struct Reading: Equatable, CustomStringConvertible {
+    /// Pure value type → implicit Sendable.
+    struct Reading: Equatable, CustomStringConvertible, Sendable {
         let utcTime: UInt32
         let temperature: Float
         let humidity: Float
@@ -55,6 +67,25 @@ final class KBeaconBridge: NSObject {
         var description: String {
             String(format: "utc=%u t=%.2f h=%.2f", utcTime, temperature, humidity)
         }
+    }
+
+    /// Sendable mirror of `KBRecordInfoRsp` — built inside the SDK's
+    /// callback queue from the non-Sendable response, then shipped
+    /// across the `async` boundary.
+    struct SensorInfo: Equatable, Sendable {
+        let sensorType: Int
+        let totalRecordNumber: UInt32
+        let unreadRecordNumber: UInt32
+        let readInfoUtcSeconds: UInt32
+    }
+
+    /// Sendable mirror of one paged `KBRecordDataRsp` — the readings are
+    /// already extracted into Sendable `Reading` values, and `nextCursor`
+    /// is the raw `readDataNextPos`. End-of-data sentinel handling lives
+    /// in the caller (`readAllRecords`).
+    struct RecordPage: Equatable, Sendable {
+        let readings: [Reading]
+        let nextCursor: UInt32
     }
 
     private let beacon: KBeacon
@@ -102,24 +133,34 @@ final class KBeaconBridge: NSObject {
 
     /// Reads the device's sensor-data summary: sensorType, totalRecordNumber,
     /// unreadRecordNumber, readInfoUtcSeconds.
-    func readSensorDataInfo() async throws -> KBRecordInfoRsp {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<KBRecordInfoRsp, Error>) in
+    func readSensorDataInfo() async throws -> SensorInfo {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<SensorInfo, Error>) in
             beacon.readSensorDataInfo(KBSensorType.HTHumidity) { result, infoRsp, error in
                 if result, let info = infoRsp {
-                    cont.resume(returning: info)
+                    // Extract Sendable values inside the SDK callback queue
+                    // BEFORE crossing the `await` boundary, so we never send
+                    // the non-Sendable `KBRecordInfoRsp` through the
+                    // continuation.
+                    let captured = SensorInfo(
+                        sensorType: info.sensorType,
+                        totalRecordNumber: info.totalRecordNumber,
+                        unreadRecordNumber: info.unreadRecordNumber,
+                        readInfoUtcSeconds: info.readInfoUtcSeconds
+                    )
+                    cont.resume(returning: captured)
                 } else {
-                    cont.resume(throwing: BridgeError.readInfoFailed(error))
+                    cont.resume(throwing: BridgeError.readInfoFailed(detail: error?.errorDescription))
                 }
             }
         }
     }
 
     /// Reads one paged batch of records starting at `cursor`. End-of-data is
-    /// signalled by the SDK returning `INVALID_DATA_RECORD_POS` as the next
-    /// cursor — callers (or `readAllRecords` below) stop the loop on that
+    /// signalled by the SDK returning `INVALID_DATA_RECORD_POS` as
+    /// `nextCursor` — callers (or `readAllRecords` below) stop on that
     /// sentinel.
-    func readNextPage(cursor: UInt32, batchSize: Int = 200) async throws -> KBRecordDataRsp {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<KBRecordDataRsp, Error>) in
+    func readNextPage(cursor: UInt32, batchSize: Int = 200) async throws -> RecordPage {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<RecordPage, Error>) in
             beacon.readSensorRecord(
                 KBSensorType.HTHumidity,
                 number: cursor,
@@ -127,9 +168,21 @@ final class KBeaconBridge: NSObject {
                 max: batchSize
             ) { result, recordRsp, error in
                 if result, let rsp = recordRsp {
-                    cont.resume(returning: rsp)
+                    // Extract readings inside the SDK callback queue so the
+                    // non-Sendable `KBRecordDataRsp` / `KBRecordHumidity`
+                    // objects never cross the `await` boundary.
+                    let records = (rsp.readDataRspList as? [KBRecordHumidity]) ?? []
+                    let readings = records.map { record in
+                        Reading(
+                            utcTime: record.utcTime,
+                            temperature: record.temperature,
+                            humidity: record.humidity
+                        )
+                    }
+                    let page = RecordPage(readings: readings, nextCursor: rsp.readDataNextPos)
+                    cont.resume(returning: page)
                 } else {
-                    cont.resume(throwing: BridgeError.readRecordFailed(error))
+                    cont.resume(throwing: BridgeError.readRecordFailed(detail: error?.errorDescription))
                 }
             }
         }
@@ -146,18 +199,10 @@ final class KBeaconBridge: NSObject {
         var readings: [Reading] = []
 
         while true {
-            let rsp = try await readNextPage(cursor: cursor, batchSize: batchSize)
+            let page = try await readNextPage(cursor: cursor, batchSize: batchSize)
+            readings.append(contentsOf: page.readings)
 
-            let page = (rsp.readDataRspList as? [KBRecordHumidity]) ?? []
-            for record in page {
-                readings.append(Reading(
-                    utcTime: record.utcTime,
-                    temperature: record.temperature,
-                    humidity: record.humidity
-                ))
-            }
-
-            let next = rsp.readDataNextPos
+            let next = page.nextCursor
             if next == KBRecordDataRsp.INVALID_DATA_RECORD_POS {
                 break    // SDK end-of-data sentinel.
             }
@@ -190,10 +235,12 @@ extension KBeaconBridge: ConnStateDelegate {
             cont.resume(returning: ())
         case .Disconnecting, .Disconnected:
             connectContinuation = nil
-            cont.resume(throwing: BridgeError.connectFailed(evt))
+            // Capture the reason as a String at the failure site so the
+            // SDK enum type doesn't cross the `async` boundary.
+            cont.resume(throwing: BridgeError.connectFailed(reason: String(describing: evt)))
         @unknown default:
             connectContinuation = nil
-            cont.resume(throwing: BridgeError.connectFailed(evt))
+            cont.resume(throwing: BridgeError.connectFailed(reason: String(describing: evt)))
         }
     }
 }

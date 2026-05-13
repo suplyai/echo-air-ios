@@ -143,38 +143,42 @@ struct ConfirmSheet: View {
         }
     }
 
-    @ViewBuilder
+    private var isMultiUnit: Bool { shipment.units.count > 1 }
+
+    /// Wrapped in `Group` (not `@ViewBuilder`) so the three top-level
+    /// conditionals — MPS badge, device-count line, unit breakdown —
+    /// resolve as a single View. Swift 6 strict mode is fussier about
+    /// `@ViewBuilder` + `let`-bindings + multiple unrelated `if` blocks;
+    /// the Group wrapper sidesteps the buildExpression inference.
     private var deviceCountSection: some View {
-        let deviceCount = shipment.devices.count
-        let unitCount = shipment.units.count
-        let isMultiUnit = unitCount > 1
+        Group {
+            if isMultiUnit {
+                Text("confirm_mps_badge")
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
+            }
 
-        if isMultiUnit {
-            Text("confirm_mps_badge")
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
-        }
+            if shipment.devices.isEmpty {
+                Text("confirm_no_devices_expected")
+                    .font(.headline)
+            } else if isMultiUnit {
+                Text(mpsSummaryString(units: shipment.units.count, devices: shipment.devices.count))
+                    .font(.headline)
+            } else {
+                // Plural variants live in `confirm_devices_to_collect` in
+                // Localizable.xcstrings; localizedStringWithFormat fires
+                // the CLDR plural rule based on the device count.
+                Text(devicesToCollectString(count: shipment.devices.count))
+                    .font(.headline)
+            }
 
-        if deviceCount == 0 {
-            Text("confirm_no_devices_expected")
-                .font(.headline)
-        } else if isMultiUnit {
-            Text(mpsSummaryString(units: unitCount, devices: deviceCount))
-                .font(.headline)
-        } else {
-            // Plural variants live in `confirm_devices_to_collect` in
-            // Localizable.xcstrings; localizedStringWithFormat fires the
-            // CLDR plural rule based on `deviceCount`.
-            Text(devicesToCollectString(count: deviceCount))
-                .font(.headline)
-        }
-
-        if isMultiUnit {
-            Text(unitBreakdown)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            if isMultiUnit {
+                Text(unitBreakdown)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

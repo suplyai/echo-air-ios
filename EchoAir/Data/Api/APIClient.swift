@@ -15,7 +15,12 @@ import Foundation
 ///
 /// Errors are surfaced as `APIClient.Error`. Non-2xx responses include
 /// the decoded `ApiError` envelope when the body parses as one.
-final class APIClient {
+///
+/// `@unchecked Sendable`: all stored properties are `let` and the types
+/// (`URL`, `URLSession`, `JSONDecoder`, `JSONEncoder`) are thread-safe in
+/// practice though not all marked `Sendable` by Apple yet. The singleton
+/// is read-only after init, so concurrent access is safe.
+final class APIClient: @unchecked Sendable {
 
     enum Error: Swift.Error, CustomStringConvertible {
         case invalidBaseURL

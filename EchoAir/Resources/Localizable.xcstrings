@@ -755,39 +755,13 @@
       }
     },
     "collection_collecting_n_of_m" : {
-      "comment" : "Plural. %1$lld = collected count, %2$lld = total count. Note Japanese reverses positional args (Y of X grammar).",
+      "comment" : "%1$lld = collected count, %2$lld = total count. Japanese reverses positional args (Y of X grammar). Plain format string — variants were identical across one/other in every locale, so no CLDR plural rule applies; this side-steps the Xcode-16 plural-inference warning that fires when %lld appears in multiple positions inside a variation.",
       "extractionState" : "manual",
       "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one"   : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } },
-              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } }
-            }
-          }
-        },
-        "es" : {
-          "variations" : {
-            "plural" : {
-              "one"   : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } },
-              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } }
-            }
-          }
-        },
-        "zh" : {
-          "variations" : {
-            "plural" : {
-              "other" : { "stringUnit" : { "state" : "translated", "value" : "已收集 %1$lld / %2$lld" } }
-            }
-          }
-        },
-        "ja" : {
-          "variations" : {
-            "plural" : {
-              "other" : { "stringUnit" : { "state" : "translated", "value" : "%2$lld 台中 %1$lld 台収集済み" } }
-            }
-          }
-        }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "已收集 %1$lld / %2$lld" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%2$lld 台中 %1$lld 台収集済み" } }
       }
     },
     "collection_close_partial" : {
@@ -820,39 +794,13 @@
       }
     },
     "collection_unit_progress" : {
-      "comment" : "Plural. %1$lld = collected on this unit, %2$lld = total on this unit. Japanese reverses positional args.",
+      "comment" : "%1$lld = collected on this unit, %2$lld = total on this unit. Japanese reverses positional args. Plain format string for the same reason as collection_collecting_n_of_m.",
       "extractionState" : "manual",
       "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one"   : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } },
-              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } }
-            }
-          }
-        },
-        "es" : {
-          "variations" : {
-            "plural" : {
-              "one"   : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } },
-              "other" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } }
-            }
-          }
-        },
-        "zh" : {
-          "variations" : {
-            "plural" : {
-              "other" : { "stringUnit" : { "state" : "translated", "value" : "已收集 %1$lld / %2$lld" } }
-            }
-          }
-        },
-        "ja" : {
-          "variations" : {
-            "plural" : {
-              "other" : { "stringUnit" : { "state" : "translated", "value" : "%2$lld 台中 %1$lld 台収集済み" } }
-            }
-          }
-        }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld of %2$lld collected" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld de %2$lld recolectados" } },
+        "zh" : { "stringUnit" : { "state" : "translated", "value" : "已收集 %1$lld / %2$lld" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%2$lld 台中 %1$lld 台収集済み" } }
       }
     },
     "collection_unattributed_unit" : {

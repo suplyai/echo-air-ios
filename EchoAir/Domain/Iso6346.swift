@@ -85,6 +85,10 @@ enum Iso6346 {
         25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 38
     ]
 
-    private static let wellFormed = /^[A-Z]{4}\d{7}$/
-    private static let prefixPattern = /^[A-Z]{4}\d{6}$/
+    /// `Regex<Output>` isn't `Sendable` in Swift 6, but these patterns are
+    /// initialised once at type-load time and only read after that.
+    /// `nonisolated(unsafe)` opts out of strict-concurrency checking for
+    /// these two properties; safe because the values are immutable.
+    nonisolated(unsafe) private static let wellFormed = /^[A-Z]{4}\d{7}$/
+    nonisolated(unsafe) private static let prefixPattern = /^[A-Z]{4}\d{6}$/
 }
