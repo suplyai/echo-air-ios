@@ -15,36 +15,25 @@ platform :ios do
     )
 
     # -----------------------------
-    # Install Certificate (.p12)
+    # Force Automatic Signing
     # -----------------------------
-    import_certificate(
-      certificate_path: "cert.p12",
-      certificate_password: ENV["P12_PASSWORD"]
+    update_code_signing_settings(
+      use_automatic_signing: true,
+      path: "EchoAir.xcodeproj",
+      team_id: ENV["APPLE_TEAM_ID"]
     )
 
     # -----------------------------
-    # Install Provisioning Profile
-    # -----------------------------
-    sh("echo $PROVISION_PROFILE_BASE64 | base64 --decode > profile.mobileprovision")
-
-    sh("""
-      mkdir -p ~/Library/MobileDevice/Provisioning\\ Profiles
-      cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\\ Profiles/
-    """)
-
-    # -----------------------------
-    # Build IPA (Manual Signing)
+    # Build IPA (Automatic Signing)
     # -----------------------------
     build_app(
-      scheme: "EchoAir",
       workspace: "EchoAir.xcworkspace",
+      scheme: "EchoAir",
       export_method: "app-store",
       export_options: {
-        signingStyle: "manual",
-        provisioningProfiles: {
-          "app.suply.echoair" => "Codemagic"
-        }
-      }
+        signingStyle: "automatic"
+      },
+      xcargs: "-allowProvisioningUpdates"
     )
 
     # -----------------------------
