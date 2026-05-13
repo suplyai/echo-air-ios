@@ -36,6 +36,7 @@ targets:
   EchoAir:
     type: application
     platform: iOS
+
     sources:
       - path: EchoAir
         excludes:
@@ -47,9 +48,10 @@ targets:
         DEVELOPMENT_TEAM: VL2Z64A683
         INFOPLIST_FILE: EchoAir/Info.plist
 
-        # ✅ CI SIGNING FIX (IMPORTANT)
+        # ✅ IMPORTANT: CLEAN SIGNING (NO CONFLICTS)
         CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_IDENTITY: "Apple Distribution"
+        CODE_SIGN_IDENTITY: ""
+        DEVELOPMENT_TEAM: VL2Z64A683
 
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: NO
@@ -62,11 +64,11 @@ targets:
 
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair
-          CODE_SIGN_STYLE: Automatic
 
   EchoAirTests:
     type: bundle.unit-test
     platform: iOS
+
     sources:
       - path: EchoAirTests
 
