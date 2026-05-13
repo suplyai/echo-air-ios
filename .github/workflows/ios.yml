@@ -11,31 +11,65 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      # ---------------------------
+      # Checkout
+      # ---------------------------
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # ---------------------------
+      # Install XcodeGen (if needed)
+      # ---------------------------
       - name: Install XcodeGen
         run: brew install xcodegen
 
       - name: Generate Xcode project
         run: xcodegen generate
 
+      # ---------------------------
+      # Setup Ruby
+      # ---------------------------
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: true
 
-      - name: Install dependencies
+      # ---------------------------
+      # Install dependencies
+      # ---------------------------
+      - name: Install Bundler
         run: bundle install
 
       - name: Install CocoaPods
         run: pod install --repo-update
 
+      # ---------------------------
+      # Install Apple Certificate (.p12)
+      # ---------------------------
+      - name: Install Certificate
+        run: |
+          echo "${{ secrets.P12_BASE64 }}" | base64 --decode > cert.p12
+
+      # ---------------------------
+      # Install Provisioning Profile
+      # ---------------------------
+      - name: Install Provisioning Profile
+        run: |
+          echo "${{ secrets.PROVISION_PROFILE_BASE64 }}" | base64 --decode > profile.mobileprovision
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      # ---------------------------
+      # Build & Upload
+      # ---------------------------
       - name: Build & Upload to TestFlight
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          PROVISION_PROFILE_BASE64: ${{ secrets.PROVISION_PROFILE_BASE64 }}
         run: bundle exec fastlane beta
