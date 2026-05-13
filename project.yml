@@ -75,6 +75,25 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair.debug
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair
+          # Manual distribution signing for Release (Archive / TestFlight).
+          # Automatic signing requires the team to have at least one
+          # registered device — even for Archive operations, Xcode tries
+          # to provision a Development profile alongside the Distribution
+          # one, and Development needs a device list. Manual distribution
+          # signing bypasses that requirement entirely.
+          #
+          # One-time setup at developer.apple.com:
+          #   1. Identifiers → register App ID `app.suply.echoair` (if absent).
+          #   2. Profiles → create an "App Store" distribution profile
+          #      scoped to that App ID; download + double-click to install.
+          #   3. Set `PROVISIONING_PROFILE_SPECIFIER_RELEASE = <profile name>`
+          #      in Config/Local.xcconfig (matches the profile name from
+          #      the portal exactly).
+          # See Config/Local.xcconfig.template for the variable comment.
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          "CODE_SIGN_IDENTITY[sdk=iphoneos*]": "Apple Distribution"
+          PROVISIONING_PROFILE_SPECIFIER: "$(PROVISIONING_PROFILE_SPECIFIER_RELEASE)"
 
   EchoAirTests:
     type: bundle.unit-test
