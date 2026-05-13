@@ -44,21 +44,28 @@ targets:
       base:
         PRODUCT_NAME: EchoAir
         INFOPLIST_FILE: EchoAir/Info.plist
-        # Automatic signing — Xcode picks the right cert + provisioning
-        # profile based on DEVELOPMENT_TEAM and the build operation
-        # (development cert for build/run, distribution cert for
-        # archive/export). DEVELOPMENT_TEAM is intentionally NOT set
-        # here; it flows in from Config/Local.xcconfig (gitignored,
-        # per-developer team ID).
+        # Fully manual signing — both configs. Xcode's automatic flow
+        # was repeatedly failing during archive pre-flight because it
+        # tries to provision a Development profile (needs registered
+        # devices) alongside the Distribution profile, even when the
+        # invoked operation is Archive. Going fully manual makes signing
+        # deterministic: no auto flow to fail on.
         #
-        # CODE_SIGN_IDENTITY is also intentionally NOT set — Xcode will
-        # error with "conflicting provisioning settings" if you pin it
-        # while using automatic signing, because automatic signing
-        # wants to choose the identity itself. PROVISIONING_PROFILE_SPECIFIER
-        # stays empty so any leftover manual-profile value can't
-        # force-disable auto-provisioning.
-        CODE_SIGN_STYLE: Automatic
-        PROVISIONING_PROFILE_SPECIFIER: ""
+        # DEVELOPMENT_TEAM intentionally NOT set here — flows in from
+        # Config/Local.xcconfig (gitignored, per-developer team ID).
+        # Currently VL2Z64A683 in Barry's checkout.
+        #
+        # Per-config:
+        #   • Release pins CODE_SIGN_IDENTITY + PROVISIONING_PROFILE_SPECIFIER
+        #     to the App Store distribution profile created at
+        #     developer.apple.com (profile name "EchoAir App Store",
+        #     cert "Apple Distribution" issued to Barry Rollins).
+        #   • Debug leaves PROVISIONING_PROFILE_SPECIFIER blank — simulator
+        #     builds use ad-hoc signing via the iphonesimulator SDK variant
+        #     and don't need a profile. Debug-on-device would need a
+        #     Development profile (blocked on device registration, deferred
+        #     until USB works).
+        CODE_SIGN_STYLE: Manual
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
         SUPPORTS_MACCATALYST: NO
@@ -73,27 +80,12 @@ targets:
       configs:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair.debug
+          PROVISIONING_PROFILE_SPECIFIER: ""
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair
-          # Manual distribution signing for Release (Archive / TestFlight).
-          # Automatic signing requires the team to have at least one
-          # registered device — even for Archive operations, Xcode tries
-          # to provision a Development profile alongside the Distribution
-          # one, and Development needs a device list. Manual distribution
-          # signing bypasses that requirement entirely.
-          #
-          # One-time setup at developer.apple.com:
-          #   1. Identifiers → register App ID `app.suply.echoair` (if absent).
-          #   2. Profiles → create an "App Store" distribution profile
-          #      scoped to that App ID; download + double-click to install.
-          #   3. Set `PROVISIONING_PROFILE_SPECIFIER_RELEASE = <profile name>`
-          #      in Config/Local.xcconfig (matches the profile name from
-          #      the portal exactly).
-          # See Config/Local.xcconfig.template for the variable comment.
-          CODE_SIGN_STYLE: Manual
           CODE_SIGN_IDENTITY: "Apple Distribution"
           "CODE_SIGN_IDENTITY[sdk=iphoneos*]": "Apple Distribution"
-          PROVISIONING_PROFILE_SPECIFIER: "$(PROVISIONING_PROFILE_SPECIFIER_RELEASE)"
+          PROVISIONING_PROFILE_SPECIFIER: "EchoAir App Store"
 
   EchoAirTests:
     type: bundle.unit-test
