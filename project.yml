@@ -47,6 +47,7 @@ targets:
         PRODUCT_NAME: EchoAir
         DEVELOPMENT_TEAM: VL2Z64A683
         INFOPLIST_FILE: EchoAir/Info.plist
+        CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: NO
         SUPPORTS_MACCATALYST: NO
@@ -55,12 +56,8 @@ targets:
       configs:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair.debug
-          CODE_SIGN_STYLE: Automatic
-
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair
-          CODE_SIGN_STYLE: Manual
-          PROVISIONING_PROFILE_SPECIFIER: match AppStore app.suply.echoair
 
   EchoAirTests:
     type: bundle.unit-test

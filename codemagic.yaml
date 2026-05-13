@@ -41,97 +41,17 @@ workflows:
 
       - name: Verify workspace exists
         script: |
-          ls -la
           ls -la EchoAir.xcworkspace
 
-      - name: Debug signing
+      - name: Build IPA
         script: |
           mkdir -p /tmp/xcodebuild_logs
-
-          echo "=== Provisioning profiles ==="
-          for f in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
-            security cms -D -i "$f" 2>/dev/null | grep -A1 "<key>Name</key>" | grep "<string>" | sed 's/.*<string>\(.*\)<\/string>/  \1/'
-          done
-
-          echo "=== Keychain certs ==="
-          security find-identity -v -p codesigning
-
-          echo "=== Release build settings ==="
-          xcodebuild \
-            -workspace "$XCODE_WORKSPACE" \
-            -scheme "$XCODE_SCHEME" \
-            -config Release \
-            -showBuildSettings 2>&1 \
-            | grep -E "CODE_SIGN|PROVISIONING|DEVELOPMENT_TEAM|BUNDLE_IDENTIFIER" \
-            | tee /tmp/xcodebuild_logs/settings.log
-
-      - name: Archive
-        script: |
-          mkdir -p /tmp/xcodebuild_logs
-          ARCHIVE_PATH="/Users/builder/clone/build/ios/xcarchive/EchoAir.xcarchive"
-          mkdir -p "$(dirname $ARCHIVE_PATH)"
-
           set -o pipefail
-          xcodebuild \
-            -workspace "$XCODE_WORKSPACE" \
-            -scheme "$XCODE_SCHEME" \
-            -config Release \
-            -archivePath "$ARCHIVE_PATH" \
-            -allowProvisioningUpdates \
-            DEVELOPMENT_TEAM=VL2Z64A683 \
-            archive \
-            2>&1 | tee /tmp/xcodebuild_logs/archive.log
-
-      - name: Export IPA
-        script: |
-          ARCHIVE_PATH="/Users/builder/clone/build/ios/xcarchive/EchoAir.xcarchive"
-          EXPORT_PATH="/Users/builder/clone/build/ios/ipa"
-          mkdir -p "$EXPORT_PATH"
-
-          # Get real profile name
-          PROFILE_NAME=$(
-            for f in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
-              security cms -D -i "$f" 2>/dev/null \
-                | grep -A1 "<key>Name</key>" \
-                | grep "<string>" \
-                | sed 's/.*<string>\(.*\)<\/string>/\1/'
-            done | grep -i "store" | head -1
-          )
-          echo "Profile: $PROFILE_NAME"
-
-          cat > /tmp/export_options.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store</string>
-            <key>teamID</key>
-            <string>VL2Z64A683</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>app.suply.echoair</key>
-              <string>${PROFILE_NAME}</string>
-            </dict>
-            <key>uploadSymbols</key>
-            <true/>
-            <key>destination</key>
-            <string>export</string>
-          </dict>
-          </plist>
-          EOF
-
-          cat /tmp/export_options.plist
-
-          set -o pipefail
-          xcodebuild \
-            -exportArchive \
-            -archivePath "$ARCHIVE_PATH" \
-            -exportPath "$EXPORT_PATH" \
-            -exportOptionsPlist /tmp/export_options.plist \
-            2>&1 | tee /tmp/xcodebuild_logs/export.log
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --config Release \
+            2>&1 | tee /tmp/xcodebuild_logs/build.log
 
     artifacts:
       - build/ios/ipa/*.ipa
