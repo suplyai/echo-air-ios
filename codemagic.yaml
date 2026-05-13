@@ -46,8 +46,25 @@ workflows:
       - name: Build IPA
         script: |
           mkdir -p /tmp/xcodebuild_logs
+          ARCHIVE_PATH="/Users/builder/clone/build/ios/xcarchive/EchoAir.xcarchive"
+          EXPORT_PATH="/Users/builder/clone/build/ios/ipa"
+          mkdir -p "$EXPORT_PATH"
 
-          cat > /Users/builder/export_options.plist << 'EOF'
+          echo "=== Archiving ==="
+          set -o pipefail
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -config Release \
+            -archivePath "$ARCHIVE_PATH" \
+            -allowProvisioningUpdates \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=VL2Z64A683 \
+            archive \
+            2>&1 | tee /tmp/xcodebuild_logs/archive.log
+
+          echo "=== Exporting IPA ==="
+          cat > /tmp/export_options.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -66,12 +83,13 @@ workflows:
           </plist>
           EOF
 
-          set -o pipefail
-          xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            --config Release \
-            2>&1 | tee /tmp/xcodebuild_logs/build.log
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist /tmp/export_options.plist \
+            -allowProvisioningUpdates \
+            2>&1 | tee /tmp/xcodebuild_logs/export.log
 
     artifacts:
       - build/ios/ipa/*.ipa
