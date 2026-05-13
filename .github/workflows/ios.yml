@@ -25,24 +25,22 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.2"
+          ruby-version: "3.3"
           bundler-cache: true
 
       - name: Install dependencies
         run: |
-          gem install bundler
           bundle install
 
       - name: Install CocoaPods
-        run: gem install cocoapods
+        run: |
+          gem install cocoapods
+          pod install --repo-update
 
-      - name: Install Pods
-        run: pod install --repo-update
-
-      - name: Build & Upload
+      - name: Build & Upload to TestFlight
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
-        run: |
-          bundle exec fastlane beta
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: bundle exec fastlane beta
