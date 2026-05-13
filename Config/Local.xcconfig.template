@@ -9,6 +9,19 @@
 // Apple Developer team. Ask the project owner for the team ID.
 DEVELOPMENT_TEAM = YOUR_APPLE_DEV_TEAM_ID
 
+// Name of the "App Store" distribution provisioning profile for Release
+// (Archive / TestFlight) builds. Set this once after creating the profile
+// at developer.apple.com → Profiles → Distribution → App Store, scoped
+// to the `app.suply.echoair` App ID. Must match the profile name as it
+// appears in the portal, EXACTLY.
+//
+// Leave blank if you're only doing simulator / debug development — the
+// Release config won't archive cleanly without it, but Debug / simulator
+// builds don't read this variable.
+//
+// Example: PROVISIONING_PROFILE_SPECIFIER_RELEASE = EchoAir App Store
+PROVISIONING_PROFILE_SPECIFIER_RELEASE =
+
 // Spike-only test device credentials. Read at runtime via Info.plist
 // $(VAR) substitution from EchoAir/Spike/SpikeConfig.swift. Leave blank
 // to disable the spike (it aborts with an empty-config message).
