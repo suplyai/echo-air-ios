@@ -51,7 +51,6 @@ workflows:
           mkdir -p "$EXPORT_PATH"
 
           echo "=== Archiving ==="
-          set -o pipefail
           xcodebuild \
             -workspace "$XCODE_WORKSPACE" \
             -scheme "$XCODE_SCHEME" \
@@ -62,6 +61,12 @@ workflows:
             DEVELOPMENT_TEAM=VL2Z64A683 \
             archive \
             2>&1 | tee /tmp/xcodebuild_logs/archive.log
+
+          echo "=== Archive log (last 50 lines) ==="
+          tail -50 /tmp/xcodebuild_logs/archive.log
+
+          echo "=== Archive exists? ==="
+          ls -la /Users/builder/clone/build/ios/xcarchive/ || echo "Directory empty or missing"
 
           echo "=== Exporting IPA ==="
           cat > /tmp/export_options.plist << 'EOF'
@@ -90,7 +95,7 @@ workflows:
             -exportOptionsPlist /tmp/export_options.plist \
             -allowProvisioningUpdates \
             2>&1 | tee /tmp/xcodebuild_logs/export.log
-
+            
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
