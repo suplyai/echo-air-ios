@@ -45,7 +45,7 @@ struct HomeView: View {
                     onTap: { path.append(.awbEntry) }
                 )
                 ActionCard(
-                    symbol: "sailboat",
+                    symbol: Symbols.oceanRoute,
                     title: "home_enter_container_number",
                     subtitle: "home_enter_container_number_help",
                     primary: false,

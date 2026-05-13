@@ -58,7 +58,13 @@ struct ConfirmSheet: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
-                    .layoutPriority(1)
+                    // No `layoutPriority` here — equal priorities give a
+                    // 50/50 split. The Android original uses weight 1f/2f
+                    // (1:2 ratio) but SwiftUI without GeometryReader can't
+                    // easily express that without collapsing the cancel
+                    // button to its intrinsic width — surfaced in pilot
+                    // build of v0.7.0 as a thin grey pill next to Start
+                    // scanning. 50/50 is the iOS-native compromise.
                 }
                 .padding(.top, 8)
             }
@@ -126,7 +132,7 @@ struct ConfirmSheet: View {
         let dest: String? = shipment.isOcean
             ? shipment.pod?.nilIfBlank
             : formatEndpoint(city: shipment.airDestCity, iata: shipment.airDestIata)
-        let symbol = shipment.isOcean ? "sailboat" : "airplane"
+        let symbol = shipment.isOcean ? Symbols.oceanRoute : Symbols.airRoute
 
         return Group {
             if origin != nil || dest != nil {
