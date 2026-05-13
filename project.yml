@@ -12,7 +12,7 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.6.1"
+    MARKETING_VERSION: "0.7.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.9"
     IPHONEOS_DEPLOYMENT_TARGET: "16.0"
@@ -63,15 +63,33 @@ targets:
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair
 
+  EchoAirTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: EchoAirTests
+    dependencies:
+      - target: EchoAir
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair.tests
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/EchoAir.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/EchoAir
+        # Test target inherits ENABLE_USER_SCRIPT_SANDBOXING via TEST_HOST
+        # (no Pods script phases of its own).
+
 schemes:
   EchoAir:
     build:
       targets:
         EchoAir: all
+        EchoAirTests: [test]
     run:
       config: Debug
     test:
       config: Debug
+      targets:
+        - EchoAirTests
     profile:
       config: Release
     analyze:
