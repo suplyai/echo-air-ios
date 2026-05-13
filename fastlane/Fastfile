@@ -1,14 +1,26 @@
-lane :beta do
-  team = ENV["APPLE_TEAM_ID"]
+default_platform(:ios)
 
-  UI.user_error!("Missing APPLE_TEAM_ID") if team.to_s.strip.empty?
+platform :ios do
 
-  build_app(
-    scheme: "EchoAir",
-    export_method: "app-store",
-    export_team_id: team,
-    xcargs: "DEVELOPMENT_TEAM=#{team}"
-  )
+  lane :beta do
 
-  upload_to_testflight
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_KEY_CONTENT"],
+      is_key_content_base64: true
+    )
+
+    team = ENV["APPLE_TEAM_ID"]
+    UI.user_error!("Missing APPLE_TEAM_ID") if team.to_s.strip.empty?
+
+    build_app(
+      scheme: "EchoAir",
+      export_method: "app-store",
+      export_team_id: team,
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    upload_to_testflight
+  end
 end

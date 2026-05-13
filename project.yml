@@ -40,44 +40,22 @@ targets:
       - path: EchoAir
         excludes:
           - "Info.plist"
+
     settings:
       base:
         PRODUCT_NAME: EchoAir
         DEVELOPMENT_TEAM: VL2Z64A683
         INFOPLIST_FILE: EchoAir/Info.plist
-        # Fully manual signing — both configs. Xcode's automatic flow
-        # was repeatedly failing during archive pre-flight because it
-        # tries to provision a Development profile (needs registered
-        # devices) alongside the Distribution profile, even when the
-        # invoked operation is Archive. Going fully manual makes signing
-        # deterministic: no auto flow to fail on.
-        #
-        # DEVELOPMENT_TEAM intentionally NOT set here — flows in from
-        # Config/Local.xcconfig (gitignored, per-developer team ID).
-        # Currently VL2Z64A683 in Barry's checkout.
-        #
-        # Per-config:
-        #   • Release pins CODE_SIGN_IDENTITY + PROVISIONING_PROFILE_SPECIFIER
-        #     to the App Store distribution profile created at
-        #     developer.apple.com (profile name "EchoAir App Store",
-        #     cert "Apple Distribution" issued to Barry Rollins).
-        #   • Debug leaves PROVISIONING_PROFILE_SPECIFIER blank — simulator
-        #     builds use ad-hoc signing via the iphonesimulator SDK variant
-        #     and don't need a profile. Debug-on-device would need a
-        #     Development profile (blocked on device registration, deferred
-        #     until USB works).
+
+        # 🔥 IMPORTANT: CI-friendly automatic signing
         CODE_SIGN_STYLE: Automatic
+
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
-        # CocoaPods' [CP] Copy Pods Resources / Embed Pods Frameworks
-        # phases shell out to rsync, which the Xcode 15 sandbox default
-        # denies (rsync deny(1) file-write-create at build time).
-        # Project-wide default in `settings.base` stays YES; this is the
-        # narrowest opt-out for the host target. Mirrored in Podfile's
-        # post_install for pod targets — see Podfile.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+
       configs:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair.debug
@@ -96,8 +74,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair.tests
         BUNDLE_LOADER: $(TEST_HOST)
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/EchoAir.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/EchoAir
-        # Test target inherits ENABLE_USER_SCRIPT_SANDBOXING via TEST_HOST
-        # (no Pods script phases of its own).
 
 schemes:
   EchoAir:
@@ -111,9 +87,5 @@ schemes:
       config: Debug
       targets:
         - EchoAirTests
-    profile:
-      config: Release
-    analyze:
-      config: Debug
     archive:
       config: Release
