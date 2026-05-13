@@ -48,6 +48,14 @@ final class APIClient: @unchecked Sendable {
 
     static let shared = APIClient()
 
+    /// DIAGNOSTIC (see init): User-Agent that mimics Android OkHttp's
+    /// default. Format is `okhttp/<version>`. Picked 4.12.0 as a
+    /// representative modern OkHttp release — exact version probably
+    /// doesn't matter to the backend if it's just sniffing the `okhttp/`
+    /// prefix. Revert this once Suply's backend stops dispatching on
+    /// the client header.
+    private static let diagnosticUserAgent = "okhttp/4.12.0"
+
     private let baseURL: URL
     private let session: URLSession
     private let decoder: JSONDecoder
@@ -66,6 +74,17 @@ final class APIClient: @unchecked Sendable {
         config.timeoutIntervalForRequest = 60
         config.timeoutIntervalForResource = 60
         config.waitsForConnectivity = false
+        // DIAGNOSTIC: override User-Agent to match OkHttp's default
+        // (`okhttp/x.y.z`) so the Suply backend can't dispatch on the
+        // client header. The iOS-default UA is something like
+        // `EchoAir/0.7.0 CFNetwork/... Darwin/...` — different shape
+        // from Android. If `/api/vision/identify-shipment` starts
+        // returning shipments for AWB-only payloads with this UA, the
+        // backend's dispatch branches on UA (and the proper fix is on
+        // the backend side, not iOS). If the 500 persists, UA-sniff is
+        // ruled out and we move to the next diagnostic
+        // (Accept-Encoding, or explicit `container_number: null`).
+        config.httpAdditionalHeaders = ["User-Agent": Self.diagnosticUserAgent]
         session = URLSession(configuration: config)
 
         decoder = JSONDecoder()
