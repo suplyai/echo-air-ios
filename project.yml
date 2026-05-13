@@ -44,8 +44,20 @@ targets:
       base:
         PRODUCT_NAME: EchoAir
         INFOPLIST_FILE: EchoAir/Info.plist
+        # Automatic signing — Xcode picks the right cert + provisioning
+        # profile based on DEVELOPMENT_TEAM. DEVELOPMENT_TEAM is
+        # intentionally NOT set here; it flows in from Config/Local.xcconfig
+        # (gitignored, per-developer team ID). Setting it here — even to
+        # an empty string — would override the xcconfig value, because
+        # target-level build settings take precedence over target-level
+        # xcconfigs in Xcode's build-setting hierarchy.
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_IDENTITY: "Apple Development"
+        "CODE_SIGN_IDENTITY[sdk=iphoneos*]": "Apple Development"
+        # Cleared explicitly so Xcode auto-provisions; a non-empty value
+        # here would force manual provisioning and break archive on a
+        # machine without the named profile installed.
+        PROVISIONING_PROFILE_SPECIFIER: ""
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
         SUPPORTS_MACCATALYST: NO
@@ -62,6 +74,11 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair.debug
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: app.suply.echoair
+          # Archive / TestFlight builds need the Distribution identity.
+          # Automatic signing pairs this with an auto-provisioned
+          # distribution profile under DEVELOPMENT_TEAM.
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          "CODE_SIGN_IDENTITY[sdk=iphoneos*]": "Apple Distribution"
 
   EchoAirTests:
     type: bundle.unit-test
