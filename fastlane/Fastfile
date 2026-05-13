@@ -6,6 +6,7 @@ lane :beta do
   build_app(
     scheme: "EchoAir",
     export_method: "app-store",
+    export_team_id: team,
     xcargs: "DEVELOPMENT_TEAM=#{team}"
   )
 

@@ -43,6 +43,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: EchoAir
+        DEVELOPMENT_TEAM: VL2Z64A683
         INFOPLIST_FILE: EchoAir/Info.plist
         # Fully manual signing — both configs. Xcode's automatic flow
         # was repeatedly failing during archive pre-flight because it
