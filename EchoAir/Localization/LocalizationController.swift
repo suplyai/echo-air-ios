@@ -51,5 +51,15 @@ final class LocalizationController: ObservableObject {
         LocaleManager.apply(locale)
         Bundle.installLanguageOverride(tag: locale.tag)
         currentLocale = locale
+
+        #if DEBUG
+        // Verify the swap routed through. If this prints the source-language
+        // value instead of the target-locale value, the override bundle
+        // wasn't found — Bundle.main.localizations probably doesn't include
+        // <tag>.lproj (build-side: xcstrings didn't get compiled into a
+        // per-locale .lproj, likely a knownRegions issue with xcodegen).
+        let post = NSLocalizedString("language_picker_title", comment: "")
+        print("[Localization] applyLanguage(\(locale.tag)) post-swap NSLocalizedString(language_picker_title) = \"\(post)\"")
+        #endif
     }
 }

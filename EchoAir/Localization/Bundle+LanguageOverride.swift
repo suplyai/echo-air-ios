@@ -54,8 +54,45 @@ extension Bundle {
         if !(Bundle.main is RuntimeBundle) {
             object_setClass(Bundle.main, RuntimeBundle.self)
         }
-        let overrideBundle: Bundle? = Bundle.main.path(forResource: tag, ofType: "lproj")
-            .flatMap { Bundle(path: $0) }
+
+        // Xcode 15+ may compile `xcstrings` entries like `"zh"` into a
+        // `zh-Hans.lproj` directory (iOS canonical Chinese variant). Try
+        // the exact tag first, then common iOS-side variants.
+        let candidates: [String]
+        switch tag.lowercased() {
+        case "zh":      candidates = ["zh-Hans", "zh"]
+        case "zh-hans": candidates = ["zh-Hans", "zh"]
+        case "zh-hant": candidates = ["zh-Hant", "zh"]
+        default:        candidates = [tag]
+        }
+
+        var overrideBundle: Bundle?
+        var resolvedTag: String?
+        for candidate in candidates {
+            if let path = Bundle.main.path(forResource: candidate, ofType: "lproj"),
+               let bundle = Bundle(path: path) {
+                overrideBundle = bundle
+                resolvedTag = candidate
+                break
+            }
+        }
+
+        #if DEBUG
+        let sample: String = {
+            guard let bundle = overrideBundle else {
+                return "<no override bundle — strings will fall through to development language>"
+            }
+            return bundle.localizedString(forKey: "language_picker_title", value: nil, table: nil)
+        }()
+        print("""
+            [Localization] installLanguageOverride(tag: \(tag))
+              Bundle.main.localizations  = \(Bundle.main.localizations)
+              tried                      = \(candidates)
+              resolved                   = \(resolvedTag ?? "<none>")
+              sample (language_picker_title) = "\(sample)"
+            """)
+        #endif
+
         objc_setAssociatedObject(
             Bundle.main, &bundleAssocKey, overrideBundle,
             .OBJC_ASSOCIATION_RETAIN_NONATOMIC
