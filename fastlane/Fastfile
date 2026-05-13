@@ -14,7 +14,8 @@ platform :ios do
     build_app(
       scheme: "EchoAir",
       export_method: "app-store",
-      export_team_id: ENV["APPLE_TEAM_ID"]
+      export_team_id: ENV["APPLE_TEAM_ID"],
+      xcargs: "-allowProvisioningUpdates"
     )
 
     upload_to_testflight(

@@ -49,6 +49,7 @@ targets:
 
         # 🔥 IMPORTANT: CI-friendly automatic signing
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: VL2Z64A683
 
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
