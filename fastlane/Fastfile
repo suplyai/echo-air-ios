@@ -2,7 +2,7 @@ lane :beta do
   build_app(
     scheme: "EchoAir",
     export_method: "app-store",
-    export_team_id: ENV["APPLE_TEAM_ID"]
+    xcargs: "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}"
   )
 
   upload_to_testflight
