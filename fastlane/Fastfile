@@ -1,13 +1,9 @@
-default_platform(:ios)
+lane :beta do
+  build_app(
+    scheme: "EchoAir",
+    export_method: "app-store",
+    export_team_id: ENV["APPLE_TEAM_ID"]
+  )
 
-platform :ios do
-  lane :beta do
-    build_app(
-      scheme: "EchoAir"
-    )
-
-    upload_to_testflight(
-      skip_waiting_for_build_processing: true
-    )
-  end
+  upload_to_testflight
 end
