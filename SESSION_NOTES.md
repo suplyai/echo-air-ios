@@ -1,5 +1,270 @@
 # Session notes
 
+## 2026-05-08 — Phase 2: scaffold (no build)
+
+Phase 2 prep authored remotely on the web. There is no Xcode / CocoaPods
+/ xcodegen on this orchestrating machine — those steps run on the iOS
+engineer's Mac. This session writes source files only; the engineer
+runs `xcodegen generate`, `pod install`, and the actual build /
+on-device spike.
+
+### What was done
+
+- `Podfile` — `pod 'kbeaconlib2', '~> 1.2'`, target `EchoAir`,
+  `use_frameworks!`, `platform :ios, '16.0'`. `post_install` clamps
+  pod deployment targets to 16.0 so SDK defaults can't drift the floor.
+- `Config/Local.xcconfig` (gitignored) — `DEVELOPMENT_TEAM = VL2Z64A683`.
+  Kept out of public history per user's instruction.
+- `Config/Local.xcconfig.template` (committed) — placeholder seed for
+  fresh checkouts. One-line `cp` instruction in the file header.
+- `Config/{Debug,Release}.xcconfig` — added `#include? "Local.xcconfig"`
+  and `#include? "../Pods/Target Support Files/Pods-EchoAir/Pods-EchoAir.{debug,release}.xcconfig"`.
+  Optional includes mean the project resolves before either file
+  exists; CocoaPods' base-config warning stays quiet.
+- `EchoAir/Ble/KBeaconBridge.swift` — async/await wrapper around
+  kbeaconlib2's closure callbacks. Encodes the §3.10 invariants
+  explicitly: `syncUtcTime=false`, `readCommPara=true`,
+  `readSensorPara=true`, `readTriggerPara=false`, `readSlotPara=false`,
+  NormalOrder with cursor `0` initial, end-of-data via
+  `INVALID_DATA_RECORD_POS`, 200-record pages. Every SDK call site is
+  flagged `// TODO(spike): verify` — exact KBeacon selectors and
+  response accessor names need confirmation against the installed pod
+  on first compile.
+- `EchoAir/Spike/{SpikeConfig,SpikeRunner,SpikeView}.swift` — debug-only
+  spike harness, file-level `#if DEBUG` so it ships zero code in
+  release. SpikeConfig holds placeholder MAC + password (engineer
+  fills before running). SpikeRunner orchestrates scan → connect →
+  read sensor info → paged record loop, logging the four pass
+  criteria inline. SpikeView is a SwiftUI screen with a Run button
+  and monospaced log pane.
+- `EchoAir/App/ContentView.swift` — wrapped in `NavigationStack`,
+  added `#if DEBUG` "Open BLE spike" NavigationLink. Release builds
+  see only the placeholder card, byte-identical to phase 1.
+- `.gitignore` — added `Config/Local.xcconfig` and
+  `EchoAir.xcworkspace/`.
+
+### Three flagged decisions worth revisiting
+
+1. **`KBeaconBridge` selectors are unverified.** No `pod install`
+   ran here, so every `beacon.connectEnhanced(...)`,
+   `beacon.readSensorDataInfo(...)`, `beacon.readSensorRecord(...)`
+   call is a best-effort shape from handoff §1's API surface — the
+   exact parameter labels, callback signatures, and response
+   accessor names (`rsp.records`, `rsp.readDataNextPos`) are
+   guesses. The §3.10 *invariants* (cursor=0, NormalOrder,
+   syncUtcTime=false, batch=200, INVALID_DATA_RECORD_POS as
+   end-of-data sentinel, HTHumidity sensor type) are correct and
+   must not be touched while fixing selector spelling. Sites are
+   tagged `// TODO(spike): verify` for `grep` triage.
+2. **CocoaPods + xcodegen interop via `#include?`.** The pods
+   xcconfigs sit under our own `Config/{Debug,Release}.xcconfig`
+   so our `API_BASE_URL` (and any future overrides) win over pod
+   defaults. Trade-off: regenerating `project.yml`'s configFiles
+   from scratch would lose the `#include?` lines — preserve them.
+   If CocoaPods still emits the "base configuration" warning after
+   first `pod install`, it's because the engineer hasn't run
+   `xcodegen generate` against the post-pod state yet; harmless.
+3. **Spike `discover(mac:)` is a stub that throws.** The full
+   scan-then-find flow (KBeaconsMgr delegate, startScanning, MAC
+   match, stopScanning) needs writing once the pod compiles. The
+   continuation-bridging skeleton is in place — the engineer
+   completes the delegate body. Keeping it as a throwing stub is
+   deliberate: the spike will fail loudly on first run rather than
+   appear to scan and hang silently.
+
+### Next session pickup (for the iOS engineer, on his Mac)
+
+1. `git pull` this branch.
+2. `cp Config/Local.xcconfig.template Config/Local.xcconfig`, paste
+   `VL2Z64A683` for `DEVELOPMENT_TEAM`. Confirm `git status` shows
+   `Local.xcconfig` ignored.
+3. `brew install xcodegen cocoapods` if not already; install Xcode
+   15+ from the App Store. Confirm with `xcodebuild -version`.
+4. `xcodegen generate`, then `pod install`. From here open
+   `EchoAir.xcworkspace`, NOT the `.xcodeproj`.
+5. Build the EchoAir scheme. First-compile errors in
+   `EchoAir/Ble/KBeaconBridge.swift` and
+   `EchoAir/Spike/SpikeRunner.swift` are *expected* — fix the SDK
+   selectors against the installed `kbeaconlib2` 1.2.x. Cross-ref
+   `KBeaconProDemo_Ios` for shape, but remember the demo uses
+   `NewRecord` while we use `NormalOrder`. Do NOT change the §3.10
+   invariants while fixing selectors.
+6. Fill `EchoAir/Spike/SpikeConfig.swift` — test S23H MAC and the
+   KBeacon password (same value as Android's
+   `KBeaconIds.DEFAULT_PASSWORD`; ask the Android Echo Air builder).
+   Do not commit either value. They're not gitignored, so just
+   un-stage the file before pushing — or keep edits in a stash.
+7. Run on a real iPhone (BLE doesn't work in simulator). Tap
+   "Open BLE spike" → "Run spike". Confirm the log shows: connect
+   OK, sensor info readable, paged reads succeeded with cursor=0,
+   end-of-data hit `INVALID_DATA_RECORD_POS`, total record count
+   matches the test device's expected fixtures.
+8. Phase 2 is done when all four §3.10 invariants are confirmed.
+   Report back with the spike log.
+
+### Followup: spike credentials moved into `Local.xcconfig`
+
+After review, the placeholder MAC + password in `SpikeConfig.swift`
+were a tripwire for accidental commits. Moved both into the
+already-gitignored `Config/Local.xcconfig`, surfaced to runtime via
+`Info.plist` `$(VAR)` substitution (mirroring the existing
+`API_BASE_URL` plumbing). All test secrets now live in one gitignored
+place; `SpikeConfig.swift` reads them via
+`Bundle.main.object(forInfoDictionaryKey:)` and the empty-string
+fallback keeps the spike's "ABORT if empty" check intact. Empty
+defaults in `Shared.xcconfig` mean the build settings always resolve
+even on a fresh checkout, so the literal `$(SPIKE_DEVICE_MAC)` token
+never leaks into a built Info.plist.
+
+### Followup: bridge rewritten against verified SDK source
+
+User pasted kbeaconlib2 1.2.x source (KBeacon, KBeaconsMgr, KBConnPara,
+KBException, KBSensorType, KBRecordDataRsp, KBRecordHumidity,
+KBRecordInfoRsp, KBAuthHandler). `KBeaconBridge.swift` and
+`SpikeRunner.swift` rewritten against the verified API. Resolves PR #1
+flag #1 (unverified selectors) and flag #2 (throwing `discover(mac:)`
+stub).
+
+Material corrections from the speculative version:
+
+- **Connect path is delegate-based, not closure-based.** Handoff §1
+  said "closure-based callbacks, same shape as Android" — that's true
+  for read calls, but `connectEnhanced(_:timeout:connPara:delegate:)`
+  returns `Bool` synchronously and the connection lifecycle flows
+  through `ConnStateDelegate.onConnStateChange(_:state:evt:)`. Bridge
+  now conforms to `ConnStateDelegate`, captures a continuation in
+  `connect()`, resumes on terminal state. The SDK keeps its delegate
+  reference weak — no retain cycle from bridge owning beacon owning
+  weak-delegate-back-to-bridge.
+- **Cursor narrowed from `Int64` to `UInt32`.** SDK's
+  `INVALID_DATA_RECORD_POS = UInt32(4294967295)` and
+  `readDataNextPos: UInt32`. The §3.10 invariant "initial cursor 0,
+  NOT INVALID_DATA_RECORD_POS" still holds — just a narrower integer.
+- **Parameter labels:** `readSensorRecord(_:number:option:max:callback:)`.
+  Cursor is `number:`, batch size is `max:`. `sensorType` is `Int`
+  (`KBSensorType` is an NSObject class of static `Int` constants, not
+  an enum).
+- **Timeout is `Double` seconds (must be `> 3.0`), not `Int32` ms.**
+  Bridge converts internally so callers still pass milliseconds for
+  parity with Android's `CONNECT_TIMEOUT_MS = 20_000`.
+- **`KBConnPara` defaults are NOT §3.10 values.** SDK defaults
+  `syncUtcTime=true`, `readSlotPara=true`, `readTriggerPara=true`,
+  `readSensorPara=false`. Bridge explicitly overrides all five —
+  without overriding `readSensorPara`, sensor reads silently fail.
+- **Response accessors:** `rsp.readDataRspList: [NSObject]` (cast to
+  `[KBRecordHumidity]`), not `records`. `KBRecordHumidity` fields are
+  `utcTime: UInt32`, `temperature: Float`, `humidity: Float` —
+  narrower than my originally-speculated `Int64`/`Double`. `Reading`
+  struct now matches.
+- **Pre-call guards.** SDK silently returns `false` from
+  `connectEnhanced` on bad password length (must be 8–16) or
+  `timeout <= 3.0`, with no callback. Bridge throws `.requestRejected`
+  synchronously in those cases — otherwise the caller would await a
+  delegate callback that never fires.
+
+`SpikeRunner.discover(mac:)` wired against the real `KBeaconsMgr`:
+
+- `KBeaconsMgr.sharedBeaconManager` singleton, default scan filter
+  picks up KKM beacons (S23H included). Fallback to
+  `startScanningAllDevice()` available if a future device fails to
+  show up.
+- Pre-flight `centralBLEState == .PowerOn` check — without it,
+  `startScanning()` returns false silently on off/unauthorized, which
+  would look like "device not present."
+- `KBeaconMgrDelegate.onBeaconDiscovered(beacons:)` matches by
+  uppercase MAC equality. SDK formats MACs as `%02X:%02X:...`; target
+  is uppercased to defend against any alternative formatting paths.
+- 15s discovery ceiling via `Timer` — the SDK doesn't impose one.
+- `onCentralBleStateChange(newState:)` surfaces mid-scan BLE-off as a
+  discovery failure rather than a quiet hang.
+- Delegate methods are `nonisolated` and hop to `MainActor` via
+  `Task` — `KBeaconMgrDelegate` is `@objc` and the SDK may dispatch
+  from any queue, even though in practice CB callbacks land on main.
+
+Spike log lines now surface the four `KBRecordInfoRsp` accessors per
+your spec:
+
+- `sensorType` — should equal `KBSensorType.HTHumidity (0x2)`.
+- `totalRecordNumber` — non-zero confirms device has data; logged
+  alongside actual readings count for cross-check.
+- `unreadRecordNumber` — informational under NormalOrder.
+- `readInfoUtcSeconds` — logged with phone UTC at the same moment +
+  signed drift. Non-zero drift is the §3.10 `syncUtcTime=false`
+  evidence; human interprets based on how long the test device has
+  sat.
+
+PR #1 flag #3 (test credentials unfilled) stays unresolved by design —
+those live in the engineer's gitignored `Local.xcconfig`.
+
+### Followup: `ENABLE_USER_SCRIPT_SANDBOXING` disabled for CocoaPods (commit `47147bd`)
+
+First on-device build attempt failed with `rsync deny(1)
+file-write-create` errors during CocoaPods' `[CP] Copy Pods Resources`
+and `[CP] Embed Pods Frameworks` script phases. Root cause: macOS
+Sequoia + Xcode 16 default `ENABLE_USER_SCRIPT_SANDBOXING = YES`,
+which sandboxes those phases' rsync invocations.
+
+Permanent fix lives in two places:
+
+- `project.yml` sets `ENABLE_USER_SCRIPT_SANDBOXING: NO` on the
+  EchoAir target's `settings.base`. The project-wide default in the
+  top-level `settings.base` stays `YES` as a defensive starting
+  point for any future target that might not need the opt-out.
+- `Podfile`'s `post_install` loop sets `ENABLE_USER_SCRIPT_SANDBOXING
+  = 'NO'` on every pod target's build configurations. xcodegen has no
+  visibility into `Pods.xcodeproj`, so this is the matching opt-out
+  on the CocoaPods side.
+
+Both regeneration paths (`xcodegen generate` and `pod install`)
+preserve the fix. The narrow EchoAir-only opt-out leaves room for
+future non-pod targets (e.g. a unit-test target) to inherit the
+secure default.
+
+### Followup: CocoaPods + xcodegen workflow ordering
+
+**Operational rule, learned the hard way (~1h to diagnose):**
+`xcodegen generate` must ALWAYS run BEFORE `pod install`, never
+after.
+
+Running `xcodegen generate` on an already-pod-installed project
+silently wipes the CocoaPods integration from `EchoAir.xcodeproj` —
+specifically the `[CP] Embed Pods Frameworks` build phase disappears.
+The Swift build still succeeds (the linker resolves `kbeaconlib2` via
+the xcconfig includes that survive regeneration), but the framework
+isn't embedded into the app bundle. The app then crashes at launch
+with `dyld: Library not loaded: @rpath/kbeaconlib2.framework/kbeaconlib2`.
+No build-time warning surfaces the problem.
+
+The correct order, every time:
+
+1. `xcodegen generate` — produces `EchoAir.xcodeproj` from
+   `project.yml`.
+2. `pod install` — adds the `[CP] Embed Pods Frameworks` build phase
+   to `EchoAir.xcodeproj` and produces `EchoAir.xcworkspace`.
+3. Open **`EchoAir.xcworkspace`** for builds, never
+   `EchoAir.xcodeproj`. The workspace is what pulls in
+   `Pods.xcodeproj` alongside ours.
+
+If you edit `project.yml` and need to regenerate, re-run BOTH steps
+in order. The CocoaPods integration lives only in the generated
+`.xcodeproj` (the `[CP]` script phases + `Pods.xcodeproj` reference);
+xcodegen regenerates the `.xcodeproj` from scratch, blowing those
+registrations away. `pod install` is what re-adds them.
+
+### Still deferred
+
+- Phase 3+: UI, DTOs, networking, AWB validation, IATA lookup,
+  locale system, persistence, BLE collection orchestrator,
+  location capture, MPS rendering, finalize/stale logic, BT and
+  location reactive gates, App Store cleanup pass.
+- Marketing version trajectory (0.6.1 vs 1.0.0 — handoff §11).
+- Persistence layer choice (Core Data vs SwiftData vs GRDB —
+  handoff §11). Recommend GRDB unless a reason emerges.
+- CocoaPods → vendored sources or SPM wrapper migration before
+  App Store submission.
+
+---
+
 ## 2026-05-07 — Phase 1: scaffold
 
 First session on the iOS port. Worked from `docs/ios-port-handoff.md` in

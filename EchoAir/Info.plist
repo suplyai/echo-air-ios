@@ -49,5 +49,9 @@
 	<false/>
 	<key>API_BASE_URL</key>
 	<string>$(API_BASE_URL)</string>
+	<key>SPIKE_DEVICE_MAC</key>
+	<string>$(SPIKE_DEVICE_MAC)</string>
+	<key>SPIKE_DEVICE_PASSWORD</key>
+	<string>$(SPIKE_DEVICE_PASSWORD)</string>
 </dict>
 </plist>

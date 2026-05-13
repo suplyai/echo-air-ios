@@ -1,5 +1,12 @@
 #include "Shared.xcconfig"
+#include? "Local.xcconfig"
+#include? "../Pods/Target Support Files/Pods-EchoAir/Pods-EchoAir.debug.xcconfig"
 
 // Debug-only overrides go here.
 // API_BASE_URL inherits from Shared.xcconfig; flip it here if a debug
 // build should target a non-prod backend.
+//
+// The optional includes above let this file resolve before either
+// `Local.xcconfig` exists (fresh checkout) or `pod install` has run.
+// CocoaPods' "base configuration" warning is suppressed by including
+// the pod's xcconfig here — keep this line if you regenerate the file.
