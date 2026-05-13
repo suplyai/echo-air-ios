@@ -22,6 +22,14 @@ workflows:
 
     scripts:
 
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+
+      - name: Generate Xcode Project      
+        script: |
+          xcodegen generate
+
       - name: Clean CocoaPods
         script: |
           rm -rf Pods Podfile.lock
