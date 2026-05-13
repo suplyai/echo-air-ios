@@ -52,6 +52,16 @@ struct ContentView: View {
         // typed digits clear. Acceptable: language switches are rare,
         // and the alternative (custom LocalizedText view across every
         // string site) is a whole-codebase refactor for the same end.
+        //
+        // `.environment(\.locale, ...)` is the second half of the
+        // mid-session locale story. SwiftUI Text consults the
+        // environment locale for plural / inflection / sometimes string
+        // resolution; without this, transitions to non-system locales
+        // (e.g. Spanish on an en_US device) appear to "stick" at the
+        // Bundle level but not in the rendered UI. With both the
+        // environment locale AND the Bundle.main class swap in place,
+        // every locale renders correctly mid-session.
+        .environment(\.locale, Locale(identifier: localization.currentLocale.tag))
         .id(localization.currentLocale.tag)
         .sheet(isPresented: $showLanguagePicker) {
             LanguagePickerView(

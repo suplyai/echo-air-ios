@@ -67,6 +67,11 @@ final class LocalizationController: ObservableObject {
         print("[Localization] applyLanguage(\(locale.tag)) — currentLocale assignment done")
         let post = NSLocalizedString("language_picker_title", comment: "")
         print("[Localization] applyLanguage(\(locale.tag)) post-swap NSLocalizedString(language_picker_title) = \"\(post)\"")
+        // preferredLocalizations is the runtime-cached priority list that
+        // CFBundle / parts of SwiftUI may consult independently of
+        // Bundle.main.localizedString. Logging it tells us whether iOS
+        // is tracking the AppleLanguages change mid-session.
+        print("[Localization] applyLanguage(\(locale.tag)) — Bundle.main.preferredLocalizations = \(Bundle.main.preferredLocalizations)")
         print("[Localization] applyLanguage(\(locale.tag)) EXIT")
         #endif
     }
