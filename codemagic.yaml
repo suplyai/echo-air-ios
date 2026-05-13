@@ -56,7 +56,12 @@ workflows:
             <key>teamID</key>
             <string>VL2Z64A683</string>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>app.suply.echoair</key>
+              <string>match AppStore app.suply.echoair</string>
+            </dict>
             <key>uploadSymbols</key>
             <true/>
             <key>destination</key>
