@@ -44,9 +44,40 @@ workflows:
           ls -la
           ls -la EchoAir.xcworkspace
 
+      - name: Debug signing
+        script: |
+          echo "=== Provisioning profiles on machine ==="
+          ls ~/Library/MobileDevice/Provisioning\ Profiles/ 2>/dev/null || echo "No profiles found"
+
+          echo "=== Exact profile names ==="
+          for f in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
+            echo "$f"
+            security cms -D -i "$f" 2>/dev/null | grep -A1 "<key>Name</key>" | grep "<string>" | sed 's/.*<string>\(.*\)<\/string>/  name: \1/'
+          done
+
+          echo "=== Release build settings (signing) ==="
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -config Release \
+            -showBuildSettings 2>&1 | grep -E "CODE_SIGN|PROVISIONING|DEVELOPMENT_TEAM|BUNDLE_IDENTIFIER"
+
+      - name: Create log dir
+        script: |
+          mkdir -p /tmp/xcodebuild_logs
+
       - name: Create Export Options
         script: |
-          cat > /Users/builder/export_options.plist << 'EOF'
+          # Read the actual profile name installed by Codemagic
+          PROFILE_NAME=$(
+            for f in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
+              security cms -D -i "$f" 2>/dev/null | grep -A1 "<key>Name</key>" | grep "<string>" | sed 's/.*<string>\(.*\)<\/string>/\1/'
+            done | grep -i "AppStore" | grep -i "echoair" | head -1
+          )
+
+          echo "Using profile: $PROFILE_NAME"
+
+          cat > /Users/builder/export_options.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -60,7 +91,7 @@ workflows:
             <key>provisioningProfiles</key>
             <dict>
               <key>app.suply.echoair</key>
-              <string>match AppStore app.suply.echoair</string>
+              <string>${PROFILE_NAME}</string>
             </dict>
             <key>uploadSymbols</key>
             <true/>
@@ -70,13 +101,18 @@ workflows:
           </plist>
           EOF
 
+          echo "=== Export options ==="
+          cat /Users/builder/export_options.plist
+
       - name: Build IPA
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
             --config Release \
-            --export-options-plist /Users/builder/export_options.plist
+            --export-options-plist /Users/builder/export_options.plist \
+            2>&1 | tee /tmp/xcodebuild_logs/build.log
+          exit ${PIPESTATUS[0]}
 
     artifacts:
       - build/ios/ipa/*.ipa
