@@ -18,7 +18,6 @@ jobs:
         run: |
           brew update
           brew install xcodegen
-          xcodegen --version
 
       - name: Generate Xcode project
         run: xcodegen generate
@@ -27,9 +26,12 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
+          bundler-cache: true
 
-      - name: Install Fastlane
-        run: gem install fastlane
+      - name: Install dependencies
+        run: |
+          gem install bundler
+          bundle install
 
       - name: Install CocoaPods
         run: gem install cocoapods
@@ -42,4 +44,5 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
-        run: fastlane beta
+        run: |
+          bundle exec fastlane beta
