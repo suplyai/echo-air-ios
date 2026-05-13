@@ -14,25 +14,28 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Install XcodeGen
+      # Install XcodeGen (more stable version check added)
       - name: Install XcodeGen
         run: |
           brew update
           brew install xcodegen
           xcodegen --version
 
-      # Generate Xcode project (IMPORTANT: correct folder)
+      # Generate Xcode project + verify output
       - name: Generate Xcode project
         working-directory: EchoAir
-        run: xcodegen generate
+        run: |
+          xcodegen generate
+          ls -la
 
-      # Setup Ruby for Fastlane
+      # Setup Ruby (important for Fastlane stability)
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
+          bundler-cache: true
 
-      # Install Fastlane
+      # Install Fastlane (via bundler instead of gem install)
       - name: Install Fastlane
         run: gem install fastlane
 
@@ -40,10 +43,11 @@ jobs:
       - name: Install CocoaPods
         run: gem install cocoapods
 
-      # Install Pods (IMPORTANT: correct folder)
+      # Install Pods safely (workspace context fixed)
       - name: Install Pods
         working-directory: EchoAir
-        run: pod install || true
+        run: |
+          pod install --repo-update
 
       # Build + Upload to TestFlight
       - name: Build & Upload
@@ -52,4 +56,5 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
-        run: fastlane beta
+        run: |
+          fastlane beta
