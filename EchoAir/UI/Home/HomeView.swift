@@ -118,15 +118,18 @@ private struct HomeHero: View {
                 .fill(Color(.secondarySystemBackground))
 
             Image(systemName: "airplane")
-                .font(.system(size: 64, weight: .light))
+                .font(.system(size: 44, weight: .light))
                 .foregroundStyle(Color.accentColor)
                 .opacity(showVariant ? 0 : 1)
             Image(systemName: "shippingbox.fill")
-                .font(.system(size: 64, weight: .light))
+                .font(.system(size: 44, weight: .light))
                 .foregroundStyle(Color.accentColor)
                 .opacity(showVariant ? 1 : 0)
         }
-        .aspectRatio(8.0 / 5.0, contentMode: .fit)
+        // 3:1 banner — flatter than the original 8:5 brief so the placeholder
+        // doesn't dominate the page above the action cards. When the real
+        // artwork lands, revisit the ratio against the artist's framing.
+        .aspectRatio(3.0 / 1.0, contentMode: .fit)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("home_hero_image_description"))
         .task {
