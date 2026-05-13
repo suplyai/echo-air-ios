@@ -1,21 +1,22 @@
 import Foundation
 
-/// Per-app locale persistence + apply.
+/// Per-app locale persistence — the durable side of the language story.
 ///
-/// iOS's per-app language story is messier than Android's. The approach
-/// here mirrors the Android side's intent — our own UserDefaults entry
-/// is the authoritative source. `AppleLanguages` is synced as a courtesy
-/// so iOS's built-in `NSLocalizedString` picks up the chosen language
-/// on next launch, but we don't depend on it for correctness.
+/// `LocaleManager` owns the UserDefaults entry that persists the user's
+/// language choice across launches and the `AppleLanguages` sync that
+/// lets iOS pick up the right locale on cold start. It does NOT touch
+/// the running `Bundle.main` — mid-session re-rendering of localised
+/// strings is `LocalizationController`'s job (it calls
+/// `Bundle.installLanguageOverride` on top of these persistence writes).
 ///
-/// **Mid-session language switching requires app relaunch.** iOS doesn't
-/// gracefully support runtime locale changes for `NSLocalizedString`
-/// without a custom Bundle wrapper (swizzle or instance subclass). The
-/// Android side has the same architectural shape — `apply()` is the
-/// authoritative write, and the UI relies on Activity.recreate() to
-/// pick up the new Configuration. iOS's equivalent is a full relaunch.
-/// Deferred until pilot feedback warrants the complexity of mid-session
-/// re-render.
+/// Two-layer split:
+///   • `LocaleManager` — persistence + first-launch flag.
+///   • `LocalizationController` — runtime Bundle swap + `@Published`
+///     `currentLocale` for SwiftUI observation.
+///
+/// Both layers cooperate: `LocalizationController.applyLanguage` calls
+/// `LocaleManager.apply` to persist the choice, then installs the
+/// bundle override, then publishes the change.
 ///
 /// Translated from the `LocaleManager` companion in
 /// `app/src/main/kotlin/app/suply/echoair/ui/locale/AppLocale.kt`.

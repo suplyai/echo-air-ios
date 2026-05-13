@@ -60,5 +60,9 @@ enum Awb {
         Int(serial.prefix(7))! % 7
     }
 
-    private static let pattern = /^(\d{3})-?(\d{8})$/
+    /// `Regex<Output>` isn't `Sendable` in Swift 6, but this pattern is
+    /// initialised once at type-load time and only read after that.
+    /// `nonisolated(unsafe)` opts out of strict-concurrency checking for
+    /// this single property; safe because the value is immutable.
+    nonisolated(unsafe) private static let pattern = /^(\d{3})-?(\d{8})$/
 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var captureVM = CaptureViewModel()
+    @StateObject private var localization = LocalizationController.shared
     @State private var navPath: [AppDestination] = []
     @State private var showLanguagePicker = false
 
@@ -10,7 +11,7 @@ struct ContentView: View {
             HomeView(
                 path: $navPath,
                 showLanguagePicker: $showLanguagePicker,
-                currentLocale: LocaleManager.effectiveLocale()
+                currentLocale: localization.currentLocale
             )
             .navigationDestination(for: AppDestination.self) { dest in
                 switch dest {
@@ -42,13 +43,37 @@ struct ContentView: View {
                 }
             }
         }
+        // Force the entire NavigationStack subtree to re-init on language
+        // change. SwiftUI re-evaluates view bodies — and therefore re-
+        // looks up `Text(LocalizedStringKey)` values via the swapped
+        // `Bundle.main` — giving immediate (in-session) translation.
+        // Trade-off: @State below this point resets, so if the user is
+        // mid-entry on AwbEntryView when they change language, their
+        // typed digits clear. Acceptable: language switches are rare,
+        // and the alternative (custom LocalizedText view across every
+        // string site) is a whole-codebase refactor for the same end.
+        //
+        // `.environment(\.locale, ...)` is the second half of the
+        // mid-session locale story. SwiftUI Text consults the
+        // environment locale for plural / inflection / sometimes string
+        // resolution; without this, transitions to non-system locales
+        // (e.g. Spanish on an en_US device) appear to "stick" at the
+        // Bundle level but not in the rendered UI. With both the
+        // environment locale AND the Bundle.main class swap in place,
+        // every locale renders correctly mid-session.
+        .environment(\.locale, Locale(identifier: localization.currentLocale.tag))
+        .id(localization.currentLocale.tag)
         .sheet(isPresented: $showLanguagePicker) {
             LanguagePickerView(
                 onSelect: { locale in
-                    LocaleManager.apply(locale)
+                    #if DEBUG
+                    print("[Localization] picker onSelect(\(locale.tag)) — about to call applyLanguage")
+                    #endif
+                    localization.applyLanguage(locale)
+                    #if DEBUG
+                    print("[Localization] picker onSelect(\(locale.tag)) — dismissing sheet")
+                    #endif
                     showLanguagePicker = false
-                    // UI continues in current bundle until next launch;
-                    // documented limitation in LocaleManager.
                 },
                 onDismiss: { showLanguagePicker = false }
             )

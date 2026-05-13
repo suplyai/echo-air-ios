@@ -47,6 +47,11 @@ struct AwbEntryView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
+            // Prefix field is fixed-width (3 digits never grows), serial
+            // expands to fill remaining row width so all 8 digits + the
+            // green ✓ trailing icon render without clipping. Approximates
+            // the Android side's `weight(0.35f)` / `weight(0.65f)` ratio
+            // without needing GeometryReader (or iOS 17+ containerRelativeFrame).
             HStack(spacing: 12) {
                 DigitField(
                     value: $prefix,
@@ -54,8 +59,7 @@ struct AwbEntryView: View {
                     accent: prefixMatched ? Color(hex: 0x34C759) : nil
                 )
                 .focused($focused, equals: .prefix)
-                .frame(maxWidth: .infinity)
-                .frame(width: nil)
+                .frame(width: 100)
                 .onChange(of: prefix) { newValue in
                     handlePaste(raw: newValue, field: .prefix)
                 }

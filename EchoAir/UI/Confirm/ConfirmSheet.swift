@@ -58,7 +58,13 @@ struct ConfirmSheet: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
-                    .layoutPriority(1)
+                    // No `layoutPriority` here — equal priorities give a
+                    // 50/50 split. The Android original uses weight 1f/2f
+                    // (1:2 ratio) but SwiftUI without GeometryReader can't
+                    // easily express that without collapsing the cancel
+                    // button to its intrinsic width — surfaced in pilot
+                    // build of v0.7.0 as a thin grey pill next to Start
+                    // scanning. 50/50 is the iOS-native compromise.
                 }
                 .padding(.top, 8)
             }
@@ -112,69 +118,76 @@ struct ConfirmSheet: View {
         shipment.isOcean ? shipment.containerNumber : shipment.airwayBillNumber
     }
 
-    @ViewBuilder
+    /// Initialise the route fields via ternaries at the `let` site, NOT
+    /// via `if/else` assignment statements. Swift 6's `@ViewBuilder`
+    /// sees uninitialised `let` + `if/else` assignment as a conditional
+    /// View block where each branch produces `()` — same failure mode
+    /// as the original `deviceCountSection`. Group wrapper + ternaries
+    /// fixes both: lets initialise before the View builder ever runs,
+    /// then Group's body has a single conditional that's a real View.
     private var routeRow: some View {
-        let origin: String?
-        let dest: String?
-        let symbol: String
-        if shipment.isOcean {
-            origin = shipment.pol?.nilIfBlank
-            dest = shipment.pod?.nilIfBlank
-            symbol = "sailboat"
-        } else {
-            origin = formatEndpoint(city: shipment.airOriginCity, iata: shipment.airOriginIata)
-            dest = formatEndpoint(city: shipment.airDestCity, iata: shipment.airDestIata)
-            symbol = "airplane"
-        }
+        let origin: String? = shipment.isOcean
+            ? shipment.pol?.nilIfBlank
+            : formatEndpoint(city: shipment.airOriginCity, iata: shipment.airOriginIata)
+        let dest: String? = shipment.isOcean
+            ? shipment.pod?.nilIfBlank
+            : formatEndpoint(city: shipment.airDestCity, iata: shipment.airDestIata)
+        let symbol = shipment.isOcean ? Symbols.oceanRoute : Symbols.airRoute
 
-        if origin != nil || dest != nil {
-            HStack {
-                Text(origin ?? "—")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: symbol)
-                    .font(.system(size: 16))
-                    .foregroundStyle(.secondary)
-                Text(dest ?? "—")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .multilineTextAlignment(.trailing)
+        return Group {
+            if origin != nil || dest != nil {
+                HStack {
+                    Text(origin ?? "—")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: symbol)
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary)
+                    Text(dest ?? "—")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .multilineTextAlignment(.trailing)
+                }
             }
         }
     }
 
-    @ViewBuilder
+    private var isMultiUnit: Bool { shipment.units.count > 1 }
+
+    /// Wrapped in `Group` (not `@ViewBuilder`) so the three top-level
+    /// conditionals — MPS badge, device-count line, unit breakdown —
+    /// resolve as a single View. Swift 6 strict mode is fussier about
+    /// `@ViewBuilder` + `let`-bindings + multiple unrelated `if` blocks;
+    /// the Group wrapper sidesteps the buildExpression inference.
     private var deviceCountSection: some View {
-        let deviceCount = shipment.devices.count
-        let unitCount = shipment.units.count
-        let isMultiUnit = unitCount > 1
+        Group {
+            if isMultiUnit {
+                Text("confirm_mps_badge")
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
+            }
 
-        if isMultiUnit {
-            Text("confirm_mps_badge")
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
-        }
+            if shipment.devices.isEmpty {
+                Text("confirm_no_devices_expected")
+                    .font(.headline)
+            } else if isMultiUnit {
+                Text(mpsSummaryString(units: shipment.units.count, devices: shipment.devices.count))
+                    .font(.headline)
+            } else {
+                // Plural variants live in `confirm_devices_to_collect` in
+                // Localizable.xcstrings; localizedStringWithFormat fires
+                // the CLDR plural rule based on the device count.
+                Text(devicesToCollectString(count: shipment.devices.count))
+                    .font(.headline)
+            }
 
-        if deviceCount == 0 {
-            Text("confirm_no_devices_expected")
-                .font(.headline)
-        } else if isMultiUnit {
-            Text(mpsSummaryString(units: unitCount, devices: deviceCount))
-                .font(.headline)
-        } else {
-            // Plural variants live in `confirm_devices_to_collect` in
-            // Localizable.xcstrings; localizedStringWithFormat fires the
-            // CLDR plural rule based on `deviceCount`.
-            Text(devicesToCollectString(count: deviceCount))
-                .font(.headline)
-        }
-
-        if isMultiUnit {
-            Text(unitBreakdown)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            if isMultiUnit {
+                Text(unitBreakdown)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
