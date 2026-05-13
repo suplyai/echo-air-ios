@@ -48,18 +48,26 @@ final class LocalizationController: ObservableObject {
     /// strings. Idempotent — applying the current locale is a no-op aside
     /// from a single `objectWillChange` emission.
     func applyLanguage(_ locale: AppLocale) {
-        LocaleManager.apply(locale)
-        Bundle.installLanguageOverride(tag: locale.tag)
-        currentLocale = locale
-
         #if DEBUG
-        // Verify the swap routed through. If this prints the source-language
-        // value instead of the target-locale value, the override bundle
-        // wasn't found — Bundle.main.localizations probably doesn't include
-        // <tag>.lproj (build-side: xcstrings didn't get compiled into a
-        // per-locale .lproj, likely a knownRegions issue with xcodegen).
+        print("[Localization] applyLanguage(\(locale.tag)) ENTER (current=\(currentLocale.tag))")
+        #endif
+
+        LocaleManager.apply(locale)
+        #if DEBUG
+        print("[Localization] applyLanguage(\(locale.tag)) — LocaleManager.apply done")
+        #endif
+
+        Bundle.installLanguageOverride(tag: locale.tag)
+        #if DEBUG
+        print("[Localization] applyLanguage(\(locale.tag)) — Bundle.installLanguageOverride done")
+        #endif
+
+        currentLocale = locale
+        #if DEBUG
+        print("[Localization] applyLanguage(\(locale.tag)) — currentLocale assignment done")
         let post = NSLocalizedString("language_picker_title", comment: "")
         print("[Localization] applyLanguage(\(locale.tag)) post-swap NSLocalizedString(language_picker_title) = \"\(post)\"")
+        print("[Localization] applyLanguage(\(locale.tag)) EXIT")
         #endif
     }
 }

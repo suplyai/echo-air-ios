@@ -26,7 +26,12 @@ struct LanguagePickerView: View {
                 LanguageRow(
                     locale: locale,
                     selected: current == locale,
-                    onTap: { onSelect(locale) }
+                    onTap: {
+                        #if DEBUG
+                        print("[Localization] LanguageRow tap(\(locale.tag)) — invoking onSelect")
+                        #endif
+                        onSelect(locale)
+                    }
                 )
                 if locale != AppLocale.allCases.last {
                     Divider().padding(.leading, 20)

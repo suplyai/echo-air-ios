@@ -56,7 +56,13 @@ struct ContentView: View {
         .sheet(isPresented: $showLanguagePicker) {
             LanguagePickerView(
                 onSelect: { locale in
+                    #if DEBUG
+                    print("[Localization] picker onSelect(\(locale.tag)) — about to call applyLanguage")
+                    #endif
                     localization.applyLanguage(locale)
+                    #if DEBUG
+                    print("[Localization] picker onSelect(\(locale.tag)) — dismissing sheet")
+                    #endif
                     showLanguagePicker = false
                 },
                 onDismiss: { showLanguagePicker = false }
