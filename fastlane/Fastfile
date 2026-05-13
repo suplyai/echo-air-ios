@@ -15,6 +15,11 @@ platform :ios do
     )
 
     # -----------------------------
+    # Clean signing state (IMPORTANT)
+    # -----------------------------
+    sh("rm -rf ~/Library/MobileDevice/Provisioning\\ Profiles")
+
+    # -----------------------------
     # Force Automatic Signing
     # -----------------------------
     update_code_signing_settings(
@@ -24,15 +29,13 @@ platform :ios do
     )
 
     # -----------------------------
-    # Build IPA (Automatic Signing)
+    # Build IPA
     # -----------------------------
     build_app(
       workspace: "EchoAir.xcworkspace",
       scheme: "EchoAir",
       export_method: "app-store",
-      export_options: {
-        signingStyle: "automatic"
-      },
+      clean: true,
       xcargs: "-allowProvisioningUpdates"
     )
 
