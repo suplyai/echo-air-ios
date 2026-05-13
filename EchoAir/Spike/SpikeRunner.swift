@@ -1,6 +1,6 @@
 #if DEBUG
 import Foundation
-import kbeaconlib2
+@preconcurrency import kbeaconlib2
 
 /// Drives one end-to-end run of the BLE spike: scan via KBeaconsMgr →
 /// match by MAC → connect → read sensor info → page records via
@@ -20,11 +20,16 @@ final class SpikeRunner: NSObject, ObservableObject {
     @Published private(set) var log: [String] = []
     @Published private(set) var isRunning = false
 
+    /// `BLECentralMgrState` is the SDK's `@objc` enum and isn't `Sendable`,
+    /// so the `state:` associated values are captured as `String` at the
+    /// failure site (same pattern as `KBeaconBridge.BridgeError`). The
+    /// enum stays auto-`Sendable` because all associated values are
+    /// `String` / `Int`.
     enum SpikeError: Error, CustomStringConvertible {
-        case bleUnavailable(BLECentralMgrState)
+        case bleUnavailable(state: String)
         case scanRefused
         case discoveryTimeout(seconds: Int)
-        case bleStateChangedMidScan(BLECentralMgrState)
+        case bleStateChangedMidScan(state: String)
 
         var description: String {
             switch self {
@@ -111,7 +116,7 @@ final class SpikeRunner: NSObject, ObservableObject {
         // — without this pre-check, that would look like "device not present"
         // rather than "BLE off".
         guard mgr.centralBLEState == .PowerOn else {
-            throw SpikeError.bleUnavailable(mgr.centralBLEState)
+            throw SpikeError.bleUnavailable(state: String(describing: mgr.centralBLEState))
         }
 
         mgr.delegate = self
@@ -186,9 +191,14 @@ extension SpikeRunner: KBeaconMgrDelegate {
     }
 
     nonisolated func onCentralBleStateChange(newState: BLECentralMgrState) {
+        // Convert the non-Sendable BLECentralMgrState to Sendable values
+        // BEFORE the Task @MainActor hop, otherwise `newState` itself
+        // would cross the actor boundary.
+        let isPowerOn = (newState == .PowerOn)
+        let stateDescription = String(describing: newState)
         Task { @MainActor in
-            guard newState != .PowerOn else { return }
-            self.finishDiscovery(throwing: SpikeError.bleStateChangedMidScan(newState))
+            guard !isPowerOn else { return }
+            self.finishDiscovery(throwing: SpikeError.bleStateChangedMidScan(state: stateDescription))
         }
     }
 }

@@ -190,15 +190,29 @@ private final class QRCameraController: UIViewController, AVCaptureMetadataOutpu
         self.previewLayer = preview
     }
 
-    func metadataOutput(_ output: AVCaptureMetadataOutput,
-                        didOutput metadataObjects: [AVMetadataObject],
-                        from connection: AVCaptureConnection) {
-        guard !hasFiredForThisSession,
-              let object = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
+    /// `AVCaptureMetadataOutputObjectsDelegate` is an `@objc` protocol
+    /// with a non-isolated method, but `UIViewController` (and therefore
+    /// this subclass) is `@MainActor`-isolated under Swift 6. Marking
+    /// this conforming method `nonisolated` reconciles the two — Apple's
+    /// recommended pattern for @objc delegate methods on UI classes.
+    ///
+    /// Threading: we configured the output with `queue: .main`, so the
+    /// callback already lands on the main thread. The Task @MainActor
+    /// hop is a no-real-cost formality that lets us touch
+    /// MainActor-isolated `hasFiredForThisSession` + `onDetect` cleanly.
+    /// Sendable values (`payload` String) are captured at the
+    /// nonisolated boundary so nothing non-Sendable crosses.
+    nonisolated func metadataOutput(_ output: AVCaptureMetadataOutput,
+                                    didOutput metadataObjects: [AVMetadataObject],
+                                    from connection: AVCaptureConnection) {
+        guard let object = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
               let payload = object.stringValue else {
             return
         }
-        hasFiredForThisSession = true
-        onDetect?(payload)
+        Task { @MainActor [weak self] in
+            guard let self, !self.hasFiredForThisSession else { return }
+            self.hasFiredForThisSession = true
+            self.onDetect?(payload)
+        }
     }
 }

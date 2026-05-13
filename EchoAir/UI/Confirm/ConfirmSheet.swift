@@ -112,33 +112,36 @@ struct ConfirmSheet: View {
         shipment.isOcean ? shipment.containerNumber : shipment.airwayBillNumber
     }
 
-    @ViewBuilder
+    /// Initialise the route fields via ternaries at the `let` site, NOT
+    /// via `if/else` assignment statements. Swift 6's `@ViewBuilder`
+    /// sees uninitialised `let` + `if/else` assignment as a conditional
+    /// View block where each branch produces `()` — same failure mode
+    /// as the original `deviceCountSection`. Group wrapper + ternaries
+    /// fixes both: lets initialise before the View builder ever runs,
+    /// then Group's body has a single conditional that's a real View.
     private var routeRow: some View {
-        let origin: String?
-        let dest: String?
-        let symbol: String
-        if shipment.isOcean {
-            origin = shipment.pol?.nilIfBlank
-            dest = shipment.pod?.nilIfBlank
-            symbol = "sailboat"
-        } else {
-            origin = formatEndpoint(city: shipment.airOriginCity, iata: shipment.airOriginIata)
-            dest = formatEndpoint(city: shipment.airDestCity, iata: shipment.airDestIata)
-            symbol = "airplane"
-        }
+        let origin: String? = shipment.isOcean
+            ? shipment.pol?.nilIfBlank
+            : formatEndpoint(city: shipment.airOriginCity, iata: shipment.airOriginIata)
+        let dest: String? = shipment.isOcean
+            ? shipment.pod?.nilIfBlank
+            : formatEndpoint(city: shipment.airDestCity, iata: shipment.airDestIata)
+        let symbol = shipment.isOcean ? "sailboat" : "airplane"
 
-        if origin != nil || dest != nil {
-            HStack {
-                Text(origin ?? "—")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: symbol)
-                    .font(.system(size: 16))
-                    .foregroundStyle(.secondary)
-                Text(dest ?? "—")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .multilineTextAlignment(.trailing)
+        return Group {
+            if origin != nil || dest != nil {
+                HStack {
+                    Text(origin ?? "—")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: symbol)
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary)
+                    Text(dest ?? "—")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .multilineTextAlignment(.trailing)
+                }
             }
         }
     }
