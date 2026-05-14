@@ -90,6 +90,16 @@ final class APIClient: @unchecked Sendable {
         )
     }
 
+    /// POST /api/echo-scan with one device's full record batch + the
+    /// phone-minus-device clock offset captured at the moment the
+    /// orchestrator read sensor-info. One POST per device — siblings
+    /// on the same shipment are uploaded as separate calls and the
+    /// backend tracks completion via `siblings_pending` /
+    /// `all_scanned` on the response (handoff §3.3).
+    func submitEchoScan(_ request: EchoScanRequest) async throws -> EchoScanResponse {
+        try await postJSON(path: "/api/echo-scan", body: request)
+    }
+
     /// GET /api/devices/lookup?identifier={id}&include_shipment=true.
     func lookupDevice(identifier: String) async throws -> DeviceLookupResponse {
         var components = URLComponents(

@@ -32,8 +32,19 @@ struct ContentView: View {
                     )
                 case .collection:
                     if let shipment = captureVM.state.shipment {
-                        CollectionView(shipment: shipment)
-                            .onDisappear { captureVM.clear() }
+                        CollectionView(
+                            shipment: shipment,
+                            onFinish: {
+                                // Pop back to Home and forget the
+                                // resolved shipment. `.onDisappear`
+                                // would clear captureVM too, but
+                                // routing the dismiss through an
+                                // explicit closure keeps the nav-stack
+                                // mutation owned by the parent.
+                                navPath = []
+                                captureVM.clear()
+                            }
+                        )
                     } else {
                         // Defensive — shouldn't happen since .collection
                         // is only pushed after a successful confirm.
