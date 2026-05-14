@@ -69,18 +69,22 @@ final class KBeaconScanner: NSObject {
         }
 
         mgr.delegate = self
-        // Use the broader `startScanningAllDevice()` (passes nil for
-        // services) rather than `startScanning()` (filters to
-        // PARCE_UUID_KB_EXT_DATA + PARCE_UUID_EDDYSTONE). The filtered
-        // form requires the S23H to advertise one of those exact
-        // service UUIDs; if a device is provisioned to broadcast in a
-        // different format, the filter silently drops it on iOS even
-        // though Android's BluetoothDevice.getAddress() would still
-        // see it. The broader scan picks up everything in the area
-        // and we filter by MAC ourselves in `onBeaconDiscovered` —
-        // strictly dominates the filtered form for our use case.
-        // SDK: kbeaconlib2 KBeaconsMgr.swift `startScanningAllDevice()`.
-        guard mgr.startScanningAllDevice() else {
+        // Match KKM's own working demo
+        // (github.com/kkmhogen/KBeaconProDemo_Ios, RootViewController.swift)
+        // exactly: `startScanning()` with the SDK's default
+        // PARCE_UUID_KB_EXT_DATA + PARCE_UUID_EDDYSTONE service-UUID
+        // filter. PR #9 originally switched this to
+        // `startScanningAllDevice()` (nil services) on the theory that
+        // wider scans strictly dominate filtered scans for discovery.
+        // That reasoning is wrong on iOS: with nil services CoreBluetooth
+        // coalesces / drops scan-response packets differently, so the
+        // secondary advertisement carrying KKM's `KBAdvType.System`
+        // payload (the only place `KBeacon.mac` is parsed from
+        // pre-connect) may not reach `parseAdvPacket` intact. Filtered
+        // mode tells iOS to wait for and bundle the scan response with
+        // the primary, which is what the SDK's MAC parser needs. KKM's
+        // production-quality demo uses the filtered form; we match it.
+        guard mgr.startScanning() else {
             mgr.delegate = nil
             throw ScannerError.scanRefused
         }

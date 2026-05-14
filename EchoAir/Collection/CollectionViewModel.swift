@@ -66,6 +66,14 @@ final class CollectionViewModel: ObservableObject {
     /// `temperatureAlert`, etc. drive the post-collection screen state.
     @Published private(set) var lastResponse: EchoScanResponse? = nil
 
+    /// On-screen BLE diagnostic. Runs in parallel with the SDK's
+    /// scanner so a TestFlight tester can see what iOS actually
+    /// receives on the air, without needing USB / Console. Started in
+    /// `start()` after the permission gate resolves; stopped when the
+    /// Collection view disappears. **Temporary** — remove once
+    /// discovery is fixed.
+    let diagnostic = BleDiagnosticScanner()
+
     let shipment: ShipmentDto
     private let api: APIClient
 
@@ -114,11 +122,28 @@ final class CollectionViewModel: ObservableObject {
             return
         }
 
+        // Kick off the diagnostic scanner alongside the real device
+        // loop. Targets are every device on the shipment that has a
+        // MAC; devices without a MAC can't be matched and are already
+        // surfaced as `.failed` by `attemptCollect`. The diagnostic
+        // runs continuously until `stopDiagnostic()` is called from
+        // the view's `.onDisappear`.
+        diagnostic.start(targets: shipment.devices.compactMap { $0.mac })
+
         for index in devices.indices {
             await collectDevice(at: index)
         }
 
         phase = .finished
+    }
+
+    /// Stop the diagnostic scan. Called from the Collection view's
+    /// `.onDisappear` so the radio isn't left hot after the user
+    /// navigates back. Discoveries remain in the @Published array so
+    /// the panel preserves its content if the view momentarily
+    /// re-appears (e.g. during a navigation animation).
+    func stopDiagnostic() {
+        diagnostic.stop()
     }
 
     // MARK: - Per-device retry loop
