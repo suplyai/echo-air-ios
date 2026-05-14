@@ -45,6 +45,16 @@ final class KBeaconScanner: NSObject {
         }
     }
 
+    /// Per-attempt scan ceiling. Widened from 15s to 25s so the
+    /// SDK has time to: (1) deliver enough `didDiscover` callbacks
+    /// for the device's System advertisement slot to arrive on the
+    /// air (KKM devices round-robin slots; the System slot is one
+    /// of several), AND (2) fire its internal batched
+    /// `delayReportAdvTimer` so our `onBeaconDiscovered` delegate
+    /// gets called with the KBeacon in its System-parsed state.
+    /// 15s was on the edge in practice on real hardware.
+    static let defaultTimeoutSec: TimeInterval = 25
+
     private var discoveryContinuation: CheckedContinuation<KBeacon, Error>?
     private var discoveryTimer: Timer?
     private var targetMacUppercased: String = ""
@@ -57,7 +67,7 @@ final class KBeaconScanner: NSObject {
     ///
     /// Caller owns the returned `KBeacon` — disconnect via the bridge's
     /// underlying `beacon.disconnect()` when finished.
-    func discover(mac: String, timeoutSec: TimeInterval = 15) async throws -> KBeacon {
+    func discover(mac: String, timeoutSec: TimeInterval = KBeaconScanner.defaultTimeoutSec) async throws -> KBeacon {
         targetMacUppercased = mac.uppercased()
         let mgr = KBeaconsMgr.sharedBeaconManager
 
@@ -131,12 +141,48 @@ extension KBeaconScanner: KBeaconMgrDelegate {
     // In practice these land on main, but mark nonisolated and hop back
     // to MainActor under strict concurrency.
     nonisolated func onBeaconDiscovered(beacons: [KBeacon]) {
-        // The SDK formats discovered MACs via "%02X:..." (uppercase).
-        // Capture into Sendable values before crossing into MainActor.
-        let macs: [(uuid: String, mac: String?)] = beacons.map { ($0.uuidString ?? "", $0.mac) }
+        // Read the parsed System packet's `macAddress` directly via
+        // the SDK's public `getAvPacketByType(_:)` accessor, rather
+        // than relying on `KBeacon.mac`.
+        //
+        // Why bypass `KBeacon.mac`: it has a four-path fallback chain
+        // in the SDK (path 1 = System packet macAddress, path 2 =
+        // mAdvPacketMgr.mAdvMacAddress set in the EXT_DATA service
+        // branch under specific byte signatures, path 3 = connectionMac
+        // post-connect, path 4 = KBPreferance cache). Path 1 is
+        // `if let sysAdvPacket = ... as? KBAdvPacketSystem { return
+        // sysAdvPacket.macAddress }` — it returns whatever macAddress
+        // is, INCLUDING NIL, and never falls through to path 2 when
+        // a System packet exists but its macAddress is nil. We hit
+        // exactly this case on factory-default Echo Air devices with
+        // a System slot configured: the SDK parses System bytes
+        // correctly into `macAddress`, but timing between batched
+        // advert delivery and the `onBeaconDiscovered` delegate fire
+        // can produce moments where `getAvPacket(System)` returns a
+        // KBAdvPacketSystem whose `macAddress` is still nil — and
+        // `KBeacon.mac` returns nil in those moments instead of
+        // falling through.
+        //
+        // Directly reading the System packet's macAddress lets us
+        // match on the first delegate call after the System bytes
+        // have been parsed (per `KBAdvPacketSystem.parseAdvPacket`,
+        // which sets macAddress unconditionally on the same line it
+        // reads bytes 3-8). Captured as `String?` before the actor
+        // hop because KBeacon isn't Sendable.
+        //
+        // Empty `beacons` arrays from the SDK are tolerated: `.map`
+        // returns [], `.first(where:)` returns nil, the guard fails,
+        // we `return` without resuming the continuation, and the
+        // outer scan continues until either a non-empty match or the
+        // discovery timer fires.
+        let entries: [(uuid: String, sysMac: String?)] = beacons.map { beacon in
+            let sysMac = (beacon.getAvPacketByType(KBAdvType.System) as? KBAdvPacketSystem)?
+                .macAddress
+            return (beacon.uuidString ?? "", sysMac)
+        }
         Task { @MainActor in
             let target = self.targetMacUppercased
-            guard let match = macs.first(where: { $0.mac?.uppercased() == target }) else {
+            guard let match = entries.first(where: { $0.sysMac?.uppercased() == target }) else {
                 return    // not our device yet; keep scanning
             }
             // Re-look up the KBeacon by uuid from the manager's beacons

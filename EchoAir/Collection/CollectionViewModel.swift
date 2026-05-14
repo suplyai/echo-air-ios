@@ -171,10 +171,14 @@ final class CollectionViewModel: ObservableObject {
             case .missing:
                 // No advert within the scan ceiling — the device isn't
                 // in range. Retrying immediately won't help; surface as
-                // .missing and move on.
+                // .missing and move on. Source the display seconds
+                // from `KBeaconScanner.defaultTimeoutSec` so this
+                // message can't drift if the timeout is retuned later.
                 updateDevice(at: index) { state in
                     state.status = .missing
-                    state.lastError = String(describing: KBeaconScanner.ScannerError.discoveryTimeout(seconds: 15))
+                    state.lastError = String(describing: KBeaconScanner.ScannerError.discoveryTimeout(
+                        seconds: Int(KBeaconScanner.defaultTimeoutSec)
+                    ))
                 }
                 return
 
