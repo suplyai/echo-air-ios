@@ -39,6 +39,13 @@ struct CollectionView: View {
                     ForEach(vm.devices) { state in
                         DeviceRow(state: state)
                     }
+
+                    // TEMPORARY diagnostic panel — visible in TestFlight
+                    // so a tester without USB / Console can see what
+                    // iOS actually receives on the air. Remove once
+                    // discovery is fixed.
+                    DiagnosticSection(scanner: vm.diagnostic)
+                        .padding(.top, 24)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -54,6 +61,11 @@ struct CollectionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await vm.start()
+        }
+        .onDisappear {
+            // Stop the diagnostic radio when leaving the screen so
+            // nothing scans in the background after the user is done.
+            vm.stopDiagnostic()
         }
     }
 
@@ -196,5 +208,151 @@ private struct DeviceRow: View {
         case .failed:    return .red
         default:         return .secondary
         }
+    }
+}
+
+// MARK: - Diagnostic panel (temporary; TestFlight-visible)
+//
+// On-screen dump of what `BleDiagnosticScanner` sees. Designed to be
+// readable on a phone screen without scrolling-to-the-side: monospace
+// caption2 for hex strings, multi-line on overflow, matches first,
+// most-recent next. Verbatim English copy (not localised) because
+// this is a diagnostic that ships briefly and is removed once
+// discovery works.
+
+private struct DiagnosticSection: View {
+    @ObservedObject var scanner: BleDiagnosticScanner
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(verbatim: "BLE diagnostic")
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                Spacer()
+                Text(verbatim: "\(scanner.discoveries.count) seen")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text(verbatim: "State: \(stateLabel)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if scanner.targets.isEmpty {
+                Text(verbatim: "Targets: (none — shipment has no devices with a MAC)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(verbatim: "Targets (\(scanner.targets.count)):")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ForEach(scanner.targets, id: \.self) { mac in
+                    Text(verbatim: "  • \(mac)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Divider()
+                .padding(.top, 4)
+
+            if scanner.discoveries.isEmpty {
+                Text(verbatim: "No advertisements received yet. If this stays empty after 10s with the phone near the devices, iOS isn't delivering ANY discovery callbacks — investigate radio / permission state, not the SDK.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(orderedDiscoveries) { d in
+                    DiagnosticDiscoveryRow(discovery: d)
+                    Divider()
+                }
+            }
+        }
+        .padding(12)
+        .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var stateLabel: String {
+        switch scanner.state {
+        case .idle:                       return "idle"
+        case .waitingForRadio:            return "waiting for radio…"
+        case .scanning:                   return "scanning (allowDuplicates=true)"
+        case .stopped(let reason):        return "stopped — \(reason)"
+        }
+    }
+
+    /// Matches first, then most-recent. The match-first ordering
+    /// makes the panel useful at a glance: if any target's bytes
+    /// appear in any discovery, that discovery pins to the top.
+    private var orderedDiscoveries: [BleDiagnosticScanner.Discovery] {
+        scanner.discoveries.sorted { a, b in
+            if !a.matches.isEmpty && b.matches.isEmpty { return true }
+            if a.matches.isEmpty && !b.matches.isEmpty { return false }
+            return a.lastSeen > b.lastSeen
+        }
+    }
+}
+
+private struct DiagnosticDiscoveryRow: View {
+    let discovery: BleDiagnosticScanner.Discovery
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(verbatim: idLabel)
+                    .font(.caption)
+                    .fontWeight(discovery.matches.isEmpty ? .regular : .semibold)
+                Spacer()
+                Text(verbatim: "rssi=\(discovery.rssi)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if !discovery.matches.isEmpty {
+                    Text(verbatim: "MATCH")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.green)
+                }
+            }
+            if let ln = discovery.localName, !ln.isEmpty {
+                Text(verbatim: "localName=\(ln)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            if !discovery.serviceUUIDs.isEmpty {
+                Text(verbatim: "svcUUIDs=\(discovery.serviceUUIDs.joined(separator: ","))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+            }
+            if !discovery.manufacturerDataHex.isEmpty {
+                Text(verbatim: "mfg=\(discovery.manufacturerDataHex)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+            }
+            ForEach(discovery.serviceDataHex.sorted(by: { $0.key < $1.key }), id: \.key) { uuid, hex in
+                Text(verbatim: "svcData[\(uuid)]=\(hex)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+            }
+            if !discovery.advKeys.isEmpty {
+                Text(verbatim: "advKeys=\(discovery.advKeys.joined(separator: ","))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            ForEach(discovery.matches, id: \.self) { match in
+                Text(verbatim: "→ \(match.targetMac) in \(match.field) (\(match.direction))")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.green)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var idLabel: String {
+        let short = String(discovery.id.prefix(8))
+        let name = discovery.name ?? "(no name)"
+        return "\(short) \(name)"
     }
 }
