@@ -88,6 +88,32 @@ final class CollectionViewModel: ObservableObject {
         guard phase != .running else { return }
         phase = .running
 
+        // Force the iOS Bluetooth permission prompt BEFORE touching the
+        // SDK's CBCentralManager. Without this, iOS lets startScanning()
+        // succeed against an un-prompted CB instance and silently
+        // suppresses discovery callbacks — the symptom is a 15s scan
+        // ceiling with zero devices and no error. See
+        // BluetoothPermissionGate's docstring for the full quirk.
+        //
+        // If the user denies (or has previously denied) Bluetooth, mark
+        // every device with the gate's error message and bail out of
+        // the device loop. Retrying the scan won't help — only the user
+        // re-enabling in Settings → Echo Air → Bluetooth can.
+        do {
+            try await BluetoothPermissionGate.shared.waitForReady()
+        } catch {
+            let message = String(describing: error)
+            for index in devices.indices {
+                updateDevice(at: index) { state in
+                    state.status = .failed
+                    state.attempt = 1
+                    state.lastError = message
+                }
+            }
+            phase = .finished
+            return
+        }
+
         for index in devices.indices {
             await collectDevice(at: index)
         }

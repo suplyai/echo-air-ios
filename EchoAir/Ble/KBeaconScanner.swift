@@ -69,7 +69,18 @@ final class KBeaconScanner: NSObject {
         }
 
         mgr.delegate = self
-        guard mgr.startScanning() else {
+        // Use the broader `startScanningAllDevice()` (passes nil for
+        // services) rather than `startScanning()` (filters to
+        // PARCE_UUID_KB_EXT_DATA + PARCE_UUID_EDDYSTONE). The filtered
+        // form requires the S23H to advertise one of those exact
+        // service UUIDs; if a device is provisioned to broadcast in a
+        // different format, the filter silently drops it on iOS even
+        // though Android's BluetoothDevice.getAddress() would still
+        // see it. The broader scan picks up everything in the area
+        // and we filter by MAC ourselves in `onBeaconDiscovered` —
+        // strictly dominates the filtered form for our use case.
+        // SDK: kbeaconlib2 KBeaconsMgr.swift `startScanningAllDevice()`.
+        guard mgr.startScanningAllDevice() else {
             mgr.delegate = nil
             throw ScannerError.scanRefused
         }
