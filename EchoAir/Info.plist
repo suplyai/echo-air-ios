@@ -55,6 +55,8 @@
 	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Echo Air uses Bluetooth to read temperature data from cargo sensors during pickup at destination.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Echo Air uses Bluetooth to read temperature data from cargo sensors during pickup at destination.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Echo Air can attach the scan location to the shipment audit trail when you collect a device. Location is captured only at the moment of a successful scan, never continuously.</string>
 	<key>NSCameraUsageDescription</key>
