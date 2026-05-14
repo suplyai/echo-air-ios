@@ -28,12 +28,8 @@ workflows:
 
       - name: Set build number
         script: |
-          LATEST_TF=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo "0")
-          LATEST_AS=$(app-store-connect get-latest-app-store-build-number "$BUNDLE_ID" 2>/dev/null || echo "0")
-          LATEST=$(( LATEST_TF > LATEST_AS ? LATEST_TF : LATEST_AS ))
-          NEW=$((LATEST + 1))
-          echo "Latest TestFlight: $LATEST_TF, Latest App Store: $LATEST_AS, New: $NEW"
-          sed -i '' "s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: \"$NEW\"/" project.yml
+          echo "Setting build number to $BUILD_NUMBER"
+          sed -i '' "s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: \"$BUILD_NUMBER\"/" project.yml
           grep CURRENT_PROJECT_VERSION project.yml
 
       - name: Generate Xcode Project
