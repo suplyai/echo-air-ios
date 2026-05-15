@@ -2,35 +2,46 @@ import Foundation
 @preconcurrency import CoreBluetooth
 
 /// Forces iOS to evaluate `NSBluetoothAlwaysUsageDescription` and fire
-/// the system permission prompt before any BLE scan starts.
+/// the system permission prompt before any BLE scan starts, then
+/// **tears its own `CBCentralManager` down before returning** so the
+/// SDK's `KBeaconsMgr` is the only CB instance live in process during
+/// the production scan.
 ///
 /// **Why this exists** — iOS 13+ separates radio state from app-level
 /// authorization. `CBCentralManager.state == .poweredOn` reflects the
 /// system radio; it can be true even when `CBManager.authorization ==
 /// .notDetermined`. In that mixed state, `startScanning()` returns
 /// without error, but `didDiscoverPeripheral` callbacks never fire —
-/// scans silently return nothing. That's exactly the symptom Phase 5
-/// hit on TestFlight: 15s ceiling, zero devices, no error.
+/// scans silently return nothing. (Original Phase 5 symptom.)
 ///
-/// The system prompt is normally triggered when `CBCentralManager` is
-/// first instantiated with the Info.plist key present **and** the app
-/// is foregrounded. Relying on the SDK's lazy CBCentralManager init
-/// (inside `KBeaconsMgr.sharedBeaconManager`) didn't reliably trip
-/// that path in practice — the SDK may be on a non-main queue, may
-/// init before the SwiftUI window is up, or use options that suppress
-/// the system alert. Owning our own `CBCentralManager`, initialised
-/// on `MainActor` with default options, takes that variability out.
+/// **Why transient (PR #13)** — keeping the gate's `CBCentralManager`
+/// alive alongside the SDK's `KBeaconsMgr` CBCentralManager caused a
+/// follow-on symptom observed on real hardware: iOS delivered a
+/// peripheral's System-slot advertisement to our diagnostic
+/// CBCentralManager (third one in process, kept alive on purpose) and
+/// to the gate's (when it was kept alive), but NOT to the SDK's. The
+/// diagnostic panel showed `MATCH ✓` on the target MAC; the
+/// production scanner timed out at 25s with `.missing`. Tearing the
+/// gate's CB down after the prompt resolves (via `defer` inside
+/// `waitForReady`) gives the SDK sole ownership of the radio scan
+/// path. The diagnostic CBCentralManager is itself temporary and
+/// will be removed in the diagnostic-cleanup follow-up PR once
+/// discovery is confirmed working.
 ///
 /// **Usage** — call `try await BluetoothPermissionGate.shared.waitForReady()`
-/// before any path that touches the SDK's scanner. On first call this
-/// instantiates `CBCentralManager` and awaits the state callback; iOS
-/// fires the prompt during that window. On subsequent calls it hits a
-/// fast path against the already-resolved state.
+/// before any path that touches the SDK's scanner. On the first call
+/// ever (authorization == `.notDetermined`), this instantiates
+/// `CBCentralManager` to trigger the prompt, awaits the state
+/// callback, then deallocates the CB before returning. Subsequent
+/// calls hit a process-wide `CBCentralManager.authorization`
+/// fast path that never creates a CB instance at all.
 ///
 /// Throws `.denied` / `.restricted` if the user previously refused
-/// (Settings → Echo Air → Bluetooth); `.poweredOff` if the radio is
-/// off; `.unsupported` on simulators / hardware without BLE; and a
-/// generic `.unknown` for `@unknown default` cases.
+/// (Settings → Echo Air → Bluetooth); `.poweredOff` only via the
+/// first-call delegate path (subsequent calls hand radio-off
+/// detection to the SDK's own `centralBLEState` pre-check inside
+/// `KBeaconScanner.discover`); `.unsupported` on simulators / hardware
+/// without BLE; and a generic `.unknown` for `@unknown default` cases.
 @MainActor
 final class BluetoothPermissionGate: NSObject {
 
@@ -72,43 +83,78 @@ final class BluetoothPermissionGate: NSObject {
 
     static let shared = BluetoothPermissionGate()
 
-    /// Owned CBCentralManager. Kept alive for the lifetime of the app
-    /// so the system prompt fires exactly once and subsequent
-    /// `waitForReady()` calls hit the fast path against the resolved
-    /// state. We do NOT scan with this instance — the SDK's
-    /// KBeaconsMgr owns the actual scanning manager. This one exists
+    /// Transient CBCentralManager — created ONLY when iOS authorization
+    /// is `.notDetermined` (on the very first call ever), kept alive
+    /// only long enough for the system prompt to fire and the delegate
+    /// callback to resolve, then torn down via `releaseCentralManager()`
+    /// from `waitForReady`'s defer. Nil at every other moment in the
+    /// app's lifetime. We do NOT scan with this instance — the SDK's
+    /// `KBeaconsMgr` owns the actual scanning manager. This one exists
     /// purely to drive the authorization prompt.
     private var centralManager: CBCentralManager?
     private var waiter: CheckedContinuation<Void, Error>?
 
-    /// Returns once `CBCentralManager` has reached `.poweredOn` and
-    /// `CBManager.authorization == .allowedAlways`. Throws if anything
-    /// in the chain failed (permission denied, radio off, unsupported,
-    /// etc.). Safe to call repeatedly — fast-path returns synchronously
-    /// once resolved.
+    /// Returns once Bluetooth authorization has resolved to
+    /// `.allowedAlways`. Throws if the user has denied / the OS
+    /// restricts / hardware doesn't support BLE / `@unknown default`.
+    /// Safe to call repeatedly — once authorization is granted,
+    /// every subsequent call is a process-wide constant-time check
+    /// that creates no CB instance.
     func waitForReady() async throws {
-        if let mgr = centralManager, mgr.state != .unknown {
-            try Self.classify(state: mgr.state, authorization: CBCentralManager.authorization)
+        // Always tear down our CBCentralManager before this function
+        // returns, by any path (success, throw). See
+        // `releaseCentralManager()` and the file-level docstring for
+        // the multi-CB interference rationale.
+        defer { releaseCentralManager() }
+
+        // Fast path — `CBCentralManager.authorization` is a class
+        // property that survives any individual CBCentralManager
+        // being deallocated. After the very first call grants
+        // permission, every subsequent call resolves here without
+        // creating a CB instance at all, so iOS sees zero CBs from
+        // the gate once the SDK's own scan kicks in.
+        switch CBCentralManager.authorization {
+        case .allowedAlways:
             return
+        case .denied:
+            throw GateError.denied
+        case .restricted:
+            throw GateError.restricted
+        case .notDetermined:
+            break    // fall through to the prompt path below
+        @unknown default:
+            throw GateError.unknown(state: "auth=\(CBCentralManager.authorization.rawValue)")
         }
 
+        // Slow path — first call ever, authorization is undetermined.
+        // Create our CBCentralManager so iOS evaluates Info.plist's
+        // NSBluetoothAlwaysUsageDescription and fires the system
+        // prompt. Await the delegate callback to learn the outcome.
+        // The `defer` above tears the CB down before we return, so
+        // it doesn't outlive this call. Subsequent calls will hit
+        // the fast path above and never reach this point again.
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            // Multiple waiters in flight would mean concurrent callers;
-            // the orchestrator is serial so this shouldn't happen, but
-            // if it does, fail loudly rather than silently dropping a
-            // continuation.
             precondition(self.waiter == nil, "BluetoothPermissionGate.waitForReady called concurrently")
             self.waiter = cont
-            // Create lazily on first call. `queue: nil` => main queue,
-            // which is required for the system prompt to surface on
-            // the foreground window.
-            if self.centralManager == nil {
-                self.centralManager = CBCentralManager(delegate: self, queue: nil)
-            }
-            // If centralManager already exists but state was .unknown
-            // (very fast subsequent call before the first delegate
-            // callback), the existing delegate callback will resolve
-            // the new waiter.
+            // `queue: nil` => main queue, which is required for the
+            // system prompt to surface on the foreground window.
+            self.centralManager = CBCentralManager(delegate: self, queue: nil)
+        }
+    }
+
+    /// Sole owner of the CBCentralManager teardown. Sets the delegate
+    /// to nil first so any in-flight delegate dispatches from the SDK
+    /// queue land in a no-op (delegate methods route through `self`
+    /// only while the delegate property points to us), then drops the
+    /// strong reference so ARC deallocates the instance and iOS
+    /// reclaims its slot in the per-process active-CB pool. Called
+    /// from `waitForReady`'s defer; idempotent — no-op on entry when
+    /// `centralManager` is already nil (the fast path never creates
+    /// one).
+    private func releaseCentralManager() {
+        if let mgr = centralManager {
+            mgr.delegate = nil
+            centralManager = nil
         }
     }
 
