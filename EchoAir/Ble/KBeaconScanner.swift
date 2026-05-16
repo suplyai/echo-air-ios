@@ -1,207 +1,166 @@
 import Foundation
 @preconcurrency import kbeaconlib2
+@preconcurrency import CoreBluetooth
 
-/// Production-path BLE scanner. Wraps `KBeaconsMgr.sharedBeaconManager`
-/// scan + match-by-MAC + stopScanning behind a single `async` call so the
-/// collection orchestrator doesn't have to repeat the delegate dance for
-/// every device in the shipment.
+/// Production peripheral discovery + KBeacon construction.
 ///
-/// The discovery pattern (delegate set at entry, cleared at exit; 15s
-/// ceiling enforced via Timer; non-Sendable `KBeacon` re-looked-up by
-/// uuid from the manager's beacons dict after a `Task @MainActor` hop)
-/// is proven by `SpikeRunner` in Phase 2 — this is the same flow with
-/// the `#if DEBUG` shell removed. SpikeRunner stays as a manual,
-/// human-interpreted single-device probe; this scanner is the multi-
-/// device call that the orchestrator uses serially.
+/// **PR #14 architecture change.** Prior versions of this scanner
+/// drove the SDK's `KBeaconsMgr.startScanning()` and observed
+/// `KBeaconMgrDelegate.onBeaconDiscovered` to find peripherals by
+/// `KBeacon.mac`. Across 8+ TestFlight rounds we proved that the SDK's
+/// discovery path does not reliably deliver KKM devices on iOS — even
+/// when permission is granted, the scan filter matches KKM's own demo,
+/// and the device's System slot is correctly broadcasting bytes the
+/// SDK's parser would recognise. Our own raw-CB scanner
+/// (`BleDiagnosticScanner`) sees the same devices reliably every time.
 ///
-/// Threading: `@MainActor` because all of the SDK's CoreBluetooth
-/// callbacks land on main (KBeaconsMgr inits CBCentralManager without
-/// a custom queue) and the orchestrator is also main-isolated.
-/// Delegate methods are `nonisolated` and hop back via `Task @MainActor`,
-/// matching SpikeRunner.
+/// So this scanner now:
+///   1. Asks `BleDiagnosticScanner.current` (already running, started
+///      by `CollectionViewModel.start()` after the permission gate
+///      resolves) for a `CBPeripheral` whose advertisement contains a
+///      KKM System-packet-encoded MAC matching the target.
+///   2. Defensively retrieves an SDK-rooted handle to that peripheral
+///      via `KBeaconsMgr.sharedBeaconManager.cbBeaconMgr
+///      .retrievePeripherals(withIdentifiers:)`, so the SDK's
+///      `CBCentralManager` has its own reference. Falls back to our
+///      original peripheral if `retrievePeripherals` returns empty
+///      (CBPeripheral identity is system-wide; iOS should accept
+///      either, but the SDK-rooted handle eliminates cross-manager
+///      ambiguity in `connect`).
+///   3. Constructs a `KBeacon`, calls the SDK's public
+///      `attach2Device(peripheral:beaconMgr:)` and `parseAdvPacket(
+///      advData:rssi:uuid:)`, registers in `KBeaconsMgr.beacons`
+///      so any SDK-internal lookups by uuid work, and returns the
+///      `KBeacon` to the caller.
+///
+/// The SDK's `KBeaconBridge.connect` / `readSensorDataInfo` /
+/// `readSensorRecord` path takes that `KBeacon` and works without
+/// modification. Only SDK *discovery* was broken; connect + GATT
+/// reads are fine.
 @MainActor
 final class KBeaconScanner: NSObject {
 
-    /// Same shape as `SpikeRunner.SpikeError` — associated values are
-    /// `String` (not the SDK's non-Sendable `BLECentralMgrState`) so the
-    /// enum stays auto-`Sendable` and can cross the `async` boundary.
+    /// Errors thrown by `discover(mac:)`. Existing cases preserved so
+    /// `CollectionViewModel.attemptCollect`'s `.discoveryTimeout` →
+    /// `.missing` mapping still works. `scanRefused` /
+    /// `bleStateChangedMidScan` are no longer thrown post-PR #14
+    /// (we don't drive the SDK's scan anymore) but the cases are kept
+    /// for binary compatibility with the orchestrator's catch ladder.
     enum ScannerError: Error, CustomStringConvertible {
         case bleUnavailable(state: String)
         case scanRefused
         case discoveryTimeout(seconds: Int)
         case bleStateChangedMidScan(state: String)
+        /// PR #14 new — raw scanner wasn't running when `discover` was
+        /// called (someone invoked the production scanner outside the
+        /// Collection-screen lifecycle). Reflects a programming error,
+        /// not a runtime BLE issue.
+        case rawScannerUnavailable
 
         var description: String {
             switch self {
             case .bleUnavailable(let s):
                 return "BLE unavailable (state=\(s))"
             case .scanRefused:
-                return "KBeaconsMgr.startScanning() returned false"
+                return "raw scanner refused to start"
             case .discoveryTimeout(let s):
                 return "target device not discovered within \(s)s"
             case .bleStateChangedMidScan(let s):
                 return "BLE state changed mid-scan: \(s)"
+            case .rawScannerUnavailable:
+                return "raw scanner not active — BleDiagnosticScanner.start() was not called before discover()"
             }
         }
     }
 
-    /// Per-attempt scan ceiling. Widened from 15s to 25s so the
-    /// SDK has time to: (1) deliver enough `didDiscover` callbacks
-    /// for the device's System advertisement slot to arrive on the
-    /// air (KKM devices round-robin slots; the System slot is one
-    /// of several), AND (2) fire its internal batched
-    /// `delayReportAdvTimer` so our `onBeaconDiscovered` delegate
-    /// gets called with the KBeacon in its System-parsed state.
-    /// 15s was on the edge in practice on real hardware.
+    /// Per-attempt scan ceiling. Carried over from PR #12 (widened
+    /// from 15s to 25s). Still sized for the SDK's batched-delegate
+    /// timing rather than the raw scanner's instantaneous match,
+    /// because (a) the device may not be in range at the moment the
+    /// orchestrator asks for it (allow some time for the radio to
+    /// catch an advertisement), and (b) `CollectionViewModel`'s
+    /// `.missing` display string sources from this constant — keep
+    /// the user-facing copy consistent.
     static let defaultTimeoutSec: TimeInterval = 25
 
-    private var discoveryContinuation: CheckedContinuation<KBeacon, Error>?
-    private var discoveryTimer: Timer?
-    private var targetMacUppercased: String = ""
-
-    /// Scan until a beacon with `mac` is discovered, then stop scanning
-    /// and return it. Throws on `.bleUnavailable` (radio off / permission
-    /// missing), `.scanRefused` (SDK said no), `.discoveryTimeout` (device
-    /// not in range or not advertising), or `.bleStateChangedMidScan`
-    /// (radio went off while we were waiting).
+    /// Scan until a peripheral with `mac` is discovered (matched by
+    /// strict System-packet parse), then construct + return a
+    /// `KBeacon` attached to that peripheral. Throws
+    /// `.discoveryTimeout` if no match within `timeoutSec`,
+    /// `.rawScannerUnavailable` if the raw scanner isn't running.
     ///
-    /// Caller owns the returned `KBeacon` — disconnect via the bridge's
-    /// underlying `beacon.disconnect()` when finished.
+    /// Caller owns the returned `KBeacon` — disconnect via
+    /// `beacon.disconnect()` when finished. The `KBeacon` is also
+    /// registered in `KBeaconsMgr.sharedBeaconManager.beacons` for
+    /// any SDK-internal lookups by uuid (e.g. delegate routing).
     func discover(mac: String, timeoutSec: TimeInterval = KBeaconScanner.defaultTimeoutSec) async throws -> KBeacon {
-        targetMacUppercased = mac.uppercased()
-        let mgr = KBeaconsMgr.sharedBeaconManager
-
-        // startScanning() returns false silently on off / unauthorized /
-        // unknown — without this pre-check, that path would surface as
-        // "device not present" rather than "BLE off".
-        guard mgr.centralBLEState == .PowerOn else {
-            throw ScannerError.bleUnavailable(state: String(describing: mgr.centralBLEState))
+        guard let rawScanner = BleDiagnosticScanner.current else {
+            throw ScannerError.rawScannerUnavailable
         }
 
-        mgr.delegate = self
-        // Match KKM's own working demo
-        // (github.com/kkmhogen/KBeaconProDemo_Ios, RootViewController.swift)
-        // exactly: `startScanning()` with the SDK's default
-        // PARCE_UUID_KB_EXT_DATA + PARCE_UUID_EDDYSTONE service-UUID
-        // filter. PR #9 originally switched this to
-        // `startScanningAllDevice()` (nil services) on the theory that
-        // wider scans strictly dominate filtered scans for discovery.
-        // That reasoning is wrong on iOS: with nil services CoreBluetooth
-        // coalesces / drops scan-response packets differently, so the
-        // secondary advertisement carrying KKM's `KBAdvType.System`
-        // payload (the only place `KBeacon.mac` is parsed from
-        // pre-connect) may not reach `parseAdvPacket` intact. Filtered
-        // mode tells iOS to wait for and bundle the scan response with
-        // the primary, which is what the SDK's MAC parser needs. KKM's
-        // production-quality demo uses the filtered form; we match it.
-        guard mgr.startScanning() else {
-            mgr.delegate = nil
-            throw ScannerError.scanRefused
+        // 1. Discover via raw-CB scan + strict System-packet MAC
+        //    match. Returns the peripheral plus the advertisement
+        //    state captured when we matched it.
+        let matched: BleDiagnosticScanner.MatchedPeripheral
+        do {
+            matched = try await rawScanner.findPeripheral(
+                matching: mac,
+                timeoutSec: timeoutSec
+            )
+        } catch BleDiagnosticScanner.FindError.timeout {
+            throw ScannerError.discoveryTimeout(seconds: Int(timeoutSec))
+        } catch BleDiagnosticScanner.FindError.scannerStopped(let reason) {
+            throw ScannerError.bleStateChangedMidScan(state: reason)
         }
 
-        return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<KBeacon, Error>) in
-            self.discoveryContinuation = cont
-            // The SDK doesn't impose a scan ceiling; a device that never
-            // advertises would otherwise hang the orchestrator forever.
-            self.discoveryTimer = Timer.scheduledTimer(
-                withTimeInterval: timeoutSec,
-                repeats: false
-            ) { [weak self] _ in
-                Task { @MainActor in
-                    self?.finishDiscovery(throwing: ScannerError.discoveryTimeout(seconds: Int(timeoutSec)))
-                }
-            }
+        // 2. Cross-manager safety net — retrieve the peripheral via
+        //    the SDK's CBCentralManager so it has its own handle.
+        //    `cbBeaconMgr` is `@objc public var` on KBeaconsMgr
+        //    (verified against the SDK source). retrievePeripherals
+        //    returns an empty array if iOS hasn't cached the
+        //    peripheral on the SDK's manager; in that case we fall
+        //    back to our scanner's CBPeripheral. CBPeripheral
+        //    identity is system-wide so iOS should accept either,
+        //    but the SDK-rooted handle eliminates one class of
+        //    cross-manager ambiguity in CB.connect's internals.
+        let sdkMgr = KBeaconsMgr.sharedBeaconManager.cbBeaconMgr
+        let sdkPeripheral = sdkMgr
+            .retrievePeripherals(withIdentifiers: [matched.peripheral.identifier])
+            .first ?? matched.peripheral
+
+        // 3. Construct the KBeacon and run the same init sequence the
+        //    SDK's own didDiscover would have run on a successful
+        //    parse:
+        //      (a) attach2Device — sets the KBeacon as the
+        //          peripheral's delegate and stores the manager ref
+        //      (b) parseAdvPacket — populates name + rssi + the
+        //          internal mAdvPacketMgr's per-advType packets,
+        //          including the System packet whose macAddress is
+        //          what `KBeacon.mac` returns via fallback path 1
+        //    Calling both keeps the KBeacon in the same internal
+        //    state the SDK's connect / GATT-read code expects.
+        let beacon = KBeacon()
+        beacon.attach2Device(
+            peripheral: sdkPeripheral,
+            beaconMgr: KBeaconsMgr.sharedBeaconManager
+        )
+        let rssiInt8: Int8 = Int8(clamping: matched.rssi)
+        _ = beacon.parseAdvPacket(
+            advData: matched.advertisementData,
+            rssi: rssiInt8,
+            uuid: sdkPeripheral.identifier.uuidString
+        )
+
+        // 4. Register in the SDK's public `beacons` dict by uuid.
+        //    Some SDK paths consult this dict; keeping it populated
+        //    mirrors what the SDK's own didDiscover does after a
+        //    successful parseAdvPacket. `@objc public var beacons`
+        //    is a public mutable dict on KBeaconsMgr.
+        let uuidString = sdkPeripheral.identifier.uuidString
+        if KBeaconsMgr.sharedBeaconManager.beacons[uuidString] == nil {
+            KBeaconsMgr.sharedBeaconManager.beacons[uuidString] = beacon
         }
-    }
 
-    private func finishDiscovery(returning beacon: KBeacon) {
-        let cont = takeDiscoveryContinuation()
-        cont?.resume(returning: beacon)
-    }
-
-    private func finishDiscovery(throwing error: Error) {
-        let cont = takeDiscoveryContinuation()
-        cont?.resume(throwing: error)
-    }
-
-    private func takeDiscoveryContinuation() -> CheckedContinuation<KBeacon, Error>? {
-        let mgr = KBeaconsMgr.sharedBeaconManager
-        mgr.stopScanning()
-        mgr.delegate = nil
-        discoveryTimer?.invalidate()
-        discoveryTimer = nil
-        let cont = discoveryContinuation
-        discoveryContinuation = nil
-        return cont
-    }
-}
-
-extension KBeaconScanner: KBeaconMgrDelegate {
-    // KBeaconMgrDelegate is @objc; the SDK may dispatch from any queue.
-    // In practice these land on main, but mark nonisolated and hop back
-    // to MainActor under strict concurrency.
-    nonisolated func onBeaconDiscovered(beacons: [KBeacon]) {
-        // Read the parsed System packet's `macAddress` directly via
-        // the SDK's public `getAvPacketByType(_:)` accessor, rather
-        // than relying on `KBeacon.mac`.
-        //
-        // Why bypass `KBeacon.mac`: it has a four-path fallback chain
-        // in the SDK (path 1 = System packet macAddress, path 2 =
-        // mAdvPacketMgr.mAdvMacAddress set in the EXT_DATA service
-        // branch under specific byte signatures, path 3 = connectionMac
-        // post-connect, path 4 = KBPreferance cache). Path 1 is
-        // `if let sysAdvPacket = ... as? KBAdvPacketSystem { return
-        // sysAdvPacket.macAddress }` — it returns whatever macAddress
-        // is, INCLUDING NIL, and never falls through to path 2 when
-        // a System packet exists but its macAddress is nil. We hit
-        // exactly this case on factory-default Echo Air devices with
-        // a System slot configured: the SDK parses System bytes
-        // correctly into `macAddress`, but timing between batched
-        // advert delivery and the `onBeaconDiscovered` delegate fire
-        // can produce moments where `getAvPacket(System)` returns a
-        // KBAdvPacketSystem whose `macAddress` is still nil — and
-        // `KBeacon.mac` returns nil in those moments instead of
-        // falling through.
-        //
-        // Directly reading the System packet's macAddress lets us
-        // match on the first delegate call after the System bytes
-        // have been parsed (per `KBAdvPacketSystem.parseAdvPacket`,
-        // which sets macAddress unconditionally on the same line it
-        // reads bytes 3-8). Captured as `String?` before the actor
-        // hop because KBeacon isn't Sendable.
-        //
-        // Empty `beacons` arrays from the SDK are tolerated: `.map`
-        // returns [], `.first(where:)` returns nil, the guard fails,
-        // we `return` without resuming the continuation, and the
-        // outer scan continues until either a non-empty match or the
-        // discovery timer fires.
-        let entries: [(uuid: String, sysMac: String?)] = beacons.map { beacon in
-            let sysMac = (beacon.getAvPacketByType(KBAdvType.System) as? KBAdvPacketSystem)?
-                .macAddress
-            return (beacon.uuidString ?? "", sysMac)
-        }
-        Task { @MainActor in
-            let target = self.targetMacUppercased
-            guard let match = entries.first(where: { $0.sysMac?.uppercased() == target }) else {
-                return    // not our device yet; keep scanning
-            }
-            // Re-look up the KBeacon by uuid from the manager's beacons
-            // dict — the `[KBeacon]` array isn't Sendable so we can't
-            // capture it across the actor hop directly.
-            if let beacon = KBeaconsMgr.sharedBeaconManager.beacons[match.uuid] {
-                self.finishDiscovery(returning: beacon)
-            }
-        }
-    }
-
-    nonisolated func onCentralBleStateChange(newState: BLECentralMgrState) {
-        // Convert the non-Sendable BLECentralMgrState to Sendable values
-        // BEFORE the Task @MainActor hop.
-        let isPowerOn = (newState == .PowerOn)
-        let stateDescription = String(describing: newState)
-        Task { @MainActor in
-            guard !isPowerOn else { return }
-            self.finishDiscovery(throwing: ScannerError.bleStateChangedMidScan(state: stateDescription))
-        }
+        return beacon
     }
 }

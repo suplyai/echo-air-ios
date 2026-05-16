@@ -1,85 +1,89 @@
 import Foundation
 @preconcurrency import CoreBluetooth
 
-/// On-screen BLE diagnostic scanner. Runs in parallel with the SDK's
-/// `KBeaconsMgr`-based scan, with our own `CBCentralManager`, and
-/// publishes the **raw** `CBAdvertisementData` dictionary for every
-/// peripheral iOS hands us. The Collection screen renders the
-/// published `discoveries` so a TestFlight tester can see, without
-/// USB / Console, exactly what their phone is and isn't picking up.
+/// Promoted from "diagnostic-only panel scanner" (PR #10/#11) to the
+/// production discovery path (PR #14). Owns its own `CBCentralManager`,
+/// scans `withServices: nil + allowDuplicates: true`, and serves two
+/// callers from the same scan session:
 ///
-/// **Why we need this.** Three physical KBeacon devices known good
-/// (working on Android simultaneously) aren't being discovered or
-/// matched by the iOS production scan path even after the permission
-/// gate fix (PR #9, merged) restored Bluetooth permission. The next
-/// diagnostic step is to read what iOS actually sees in the
-/// advertisement payload — the SDK's `KBeacon.mac` is computed from
-/// parsed advertisement bytes, and if those bytes aren't where the
-/// SDK expects them, the match silently fails. This scanner dumps
-/// everything so we can compare the targets we're hunting against the
-/// raw bytes coming off the air.
+/// 1. The on-screen diagnostic panel — `@Published` `discoveries` and
+///    `state`, rendered by `DiagnosticSection` in `CollectionView`.
+///    The panel exists to surface what iOS is actually receiving so
+///    the user (and us) can compare against what reaches the device
+///    rows. **Kept in for this round** as the safety net; removed in
+///    the diagnostic-cleanup follow-up PR once the device rows reach
+///    `.collected` on TestFlight.
 ///
-/// **Intentionally not `#if DEBUG`**. We can't side-load a Debug
-/// build right now — the scanner needs to run in TestFlight. We will
-/// remove this file (and its UI in `CollectionView`) once discovery
-/// is fixed.
+/// 2. The production peripheral-finder — `findPeripheral(matching:)`
+///    awaitable. Used by `KBeaconScanner.discover` after we found,
+///    across 8+ TestFlight rounds, that the SDK's `KBeaconsMgr`-based
+///    scan does not reliably deliver KKM devices on iOS even when
+///    every parsing detail downstream is correct. Our raw-CB scan
+///    *does* reliably see them and we already know how to extract
+///    the MAC from the advertisement payload — the SDK's connect /
+///    GATT-read path then works fine on a `KBeacon` we construct and
+///    attach ourselves.
 ///
-/// **One CBCentralManager per app concern.** Apple supports multiple
-/// `CBCentralManager` instances per process. The
-/// `BluetoothPermissionGate` instance (one) and the SDK's
-/// `KBeaconsMgr` instance (another) plus this one (a third) all
-/// share `CBManager.authorization` (process-wide) and the radio.
-/// iOS multiplexes scans internally; no conflict in practice.
+/// **Architecture (post-PR #14):** ours is the only CBCentralManager
+/// in process that does any scanning. The SDK's `KBeaconsMgr`
+/// CBCentralManager is lazy-created during `KBeaconBridge.connect` and
+/// is used only for the connect + GATT operations. The
+/// `BluetoothPermissionGate`'s CBCentralManager is created only on the
+/// very first permission round-trip (PR #13) and torn down before
+/// returning. So during the production scan, exactly one CB is alive;
+/// during the connect phase, two CBs are alive but only one (the
+/// SDK's) is doing GATT work. No multi-CB-while-scanning interference
+/// to worry about anymore.
 @MainActor
 final class BleDiagnosticScanner: NSObject, ObservableObject {
+
+    /// Active scanner instance. Set by `start(targets:)` and cleared
+    /// by `stop()`. Read by `KBeaconScanner.discover` to access the
+    /// raw-CB discovery pipeline without `CollectionViewModel` needing
+    /// to pass the instance down through KBeaconScanner's constructor
+    /// — keeps the orchestrator (`CollectionViewModel.attemptCollect`)
+    /// signature unchanged.
+    ///
+    /// Single-active-scanner invariant matches the single-instance
+    /// `CollectionViewModel` lifecycle (one Collection screen at a
+    /// time in the nav stack).
+    static private(set) var current: BleDiagnosticScanner?
 
     /// One row in the on-screen panel. Updated in-place per peripheral
     /// (keyed by `identifier`) as iOS re-delivers the advertisement
     /// during a sustained scan — RSSI refreshes, advertisement bytes
     /// usually stay the same.
     struct Discovery: Identifiable, Equatable {
-        /// `CBPeripheral.identifier.uuidString`. Used as the dedup key.
         let id: String
-        /// `CBPeripheral.name` — iOS may return nil even when the
-        /// advertisement contains a local name (different cache).
         var name: String?
         var rssi: Int
         var lastSeen: Date
-        /// `kCBAdvDataLocalName` from the advertisement dict, if any.
         var localName: String?
-        /// `kCBAdvDataIsConnectable` from the advertisement dict.
         var isConnectable: Bool?
-        /// `kCBAdvDataTxPowerLevel` from the advertisement dict.
         var txPower: Int?
-        /// Service UUIDs the peripheral advertises (`CBUUID` -> String).
         var serviceUUIDs: [String]
-        /// Lowercase hex of `kCBAdvDataManufacturerData` (no separator).
-        /// Empty when manufacturer data wasn't included.
         var manufacturerDataHex: String
-        /// Per-service-UUID hex of `kCBAdvDataServiceData`.
         var serviceDataHex: [String: String]
-        /// All keys present in the advertisement dict, for completeness
-        /// (in case a key we don't explicitly extract is what carries
-        /// the MAC bytes on this device firmware).
         var advKeys: [String]
-        /// One per target MAC — where this discovery's bytes were
-        /// found containing that MAC's hex (and in what direction).
-        /// Empty array = no match against any target.
         var matches: [TargetMatch]
+        /// Strict-parsed MAC from the Eddystone-encapsulated
+        /// `KBAdvType.System` packet (FEAA service data, byte 0 ==
+        /// 0x22, MAC at bytes 3-8). nil when no System packet was
+        /// present in this advertisement update. Uppercase,
+        /// colon-separated, same format the SDK's
+        /// `KBAdvPacketSystem.parseAdvPacket` produces. This is the
+        /// authoritative match key for production discovery (separate
+        /// from the liberal-substring `matches` array which feeds
+        /// only the diagnostic UI).
+        var systemMac: String?
     }
 
-    /// Where a target MAC's bytes were found inside a discovery.
-    /// `field` is one of "mfg", "svc:<uuid>", or "localName" so the
-    /// fix author can see which advertisement field to parse.
-    /// `Hashable` so the panel can use `id: \.self` in `ForEach`.
     struct TargetMatch: Equatable, Hashable {
-        let targetMac: String      // "BC:57:29:1C:D6:AC" — verbatim from the shipment DTO
-        let field: String          // "mfg" / "svc:<uuid>" / "localName"
-        let direction: String      // "fwd" / "rev"
+        let targetMac: String
+        let field: String
+        let direction: String
     }
 
-    /// State enum so the UI can tell "haven't started yet" from
-    /// "scanning, just no results" from "permission/radio issue".
     enum State: Equatable {
         case idle
         case waitingForRadio
@@ -87,25 +91,84 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
         case stopped(reason: String)
     }
 
+    /// Errors thrown by `findPeripheral(matching:timeoutSec:)`. The
+    /// timeout case is translated into `KBeaconScanner.ScannerError
+    /// .discoveryTimeout(seconds:)` upstream so the orchestrator's
+    /// existing `.missing` mapping still fires.
+    enum FindError: Error, CustomStringConvertible {
+        case timeout(target: String, seconds: Int)
+        case scannerStopped(reason: String)
+
+        var description: String {
+            switch self {
+            case .timeout(let target, let seconds):
+                return "no peripheral with System-packet MAC \(target) within \(seconds)s"
+            case .scannerStopped(let reason):
+                return "scanner stopped before a match was found: \(reason)"
+            }
+        }
+    }
+
+    /// Production discovery result: the matched peripheral plus the
+    /// advertisement state we captured when we matched it. Both are
+    /// fed to `KBeacon.attach2Device(peripheral:beaconMgr:)` and
+    /// `KBeacon.parseAdvPacket(advData:rssi:uuid:)` respectively so
+    /// the constructed `KBeacon` ends up in the same internal state
+    /// the SDK's own `didDiscover` would have produced.
+    ///
+    /// `@unchecked Sendable`: held on MainActor, never crosses actor
+    /// boundaries beyond the continuation resume that produced it
+    /// (same actor, same MainActor caller).
+    struct MatchedPeripheral: @unchecked Sendable {
+        let peripheral: CBPeripheral
+        let advertisementData: [String: Any]
+        let rssi: Int
+    }
+
     @Published private(set) var discoveries: [Discovery] = []
     @Published private(set) var state: State = .idle
-    /// Target MACs (uppercased, colon-separated) we're matching
-    /// against. Set once from `CollectionViewModel.shipment.devices`.
-    /// Exposed `private(set)` so the diagnostic panel can render
-    /// them alongside the discovery list.
     @Published private(set) var targets: [String] = []
-    /// Pre-computed (forward + reverse) hex needles, lowercased,
-    /// colon-stripped, for each target. Lowercased because all hex
-    /// dumps below are lowercased so the substring search is
-    /// case-consistent.
+
     private var needles: [(target: String, fwd: String, rev: String)] = []
+
+    /// Per-peripheral cache of the most-recent matched advertisement
+    /// state. Keyed by `peripheral.identifier.uuidString`. We need
+    /// both the peripheral and the advertisement bytes to hand to
+    /// the SDK's `KBeacon.attach2Device` and
+    /// `KBeacon.parseAdvPacket`. Held on the MainActor; non-Sendable
+    /// CBPeripheral never crosses actor boundaries after capture in
+    /// `ingest`.
+    private var peripherals: [String: PeripheralCacheEntry] = [:]
+
+    private struct PeripheralCacheEntry {
+        let peripheral: CBPeripheral
+        var advertisementData: [String: Any]
+        var rssi: Int
+    }
+
+    /// In-flight `findPeripheral(matching:)` awaiters. Serial in
+    /// practice (`CollectionViewModel.collectDevice` loops one device
+    /// at a time) but kept as an array so a future parallel-collection
+    /// path doesn't have to refactor.
+    private var pendingMatches: [PendingMatch] = []
+
+    private final class PendingMatch {
+        let targetMacUpper: String
+        let continuation: CheckedContinuation<MatchedPeripheral, Error>
+        var timeoutTask: Task<Void, Never>?
+
+        init(targetMacUpper: String,
+             continuation: CheckedContinuation<MatchedPeripheral, Error>) {
+            self.targetMacUpper = targetMacUpper
+            self.continuation = continuation
+        }
+    }
 
     private var central: CBCentralManager?
 
-    /// Start scanning all BLE peripherals (nil services). Idempotent.
-    /// Discoveries accumulate via the delegate. Captures the targets
-    /// for substring matching at the same time.
+    /// Start scanning all BLE peripherals. Idempotent.
     func start(targets: [String]) {
+        Self.current = self
         self.targets = targets
         self.needles = targets.map { mac in
             let stripped = mac.replacingOccurrences(of: ":", with: "").lowercased()
@@ -124,18 +187,129 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
         }
     }
 
-    /// Stop scanning. Discoveries remain in the @Published array so
-    /// the UI keeps showing what was seen.
+    /// Stop scanning. Discoveries remain in `@Published` so the UI
+    /// keeps showing what was seen. Any in-flight awaiters are
+    /// failed with `.scannerStopped`.
     func stop() {
         central?.stopScan()
         state = .stopped(reason: "view dismissed")
+        if Self.current === self {
+            Self.current = nil
+        }
+        // Fail any in-flight findPeripheral awaiters so callers
+        // (which are awaiting them inside KBeaconScanner.discover)
+        // unblock cleanly when the screen disappears mid-collection.
+        let inflight = pendingMatches
+        pendingMatches.removeAll()
+        for pending in inflight {
+            pending.timeoutTask?.cancel()
+            pending.continuation.resume(throwing: FindError.scannerStopped(reason: "view dismissed"))
+        }
     }
 
+    // MARK: - Production discovery (PR #14)
+
+    /// Awaitable: returns the `CBPeripheral` whose advertisement
+    /// contains a KKM-System-packet-encoded MAC matching `targetMac`,
+    /// or throws `.timeout` after `timeoutSec` seconds.
+    ///
+    /// Match is on the STRICT System-packet MAC (FEAA service data
+    /// bytes 3-8 when byte 0 == 0x22), not the liberal substring
+    /// matcher that feeds the diagnostic panel — devices may have
+    /// MAC bytes appear in unrelated payloads, and we want
+    /// production discovery to only match what the SDK would
+    /// authoritatively recognise.
+    ///
+    /// Fast path: if a matching peripheral has already been
+    /// discovered (cached in `discoveries`/`peripherals`), returns
+    /// it synchronously without registering an awaiter. Slow path:
+    /// registers an awaiter that resolves on the next matching
+    /// discovery, or fires the timeout error.
+    func findPeripheral(
+        matching targetMac: String,
+        timeoutSec: TimeInterval
+    ) async throws -> MatchedPeripheral {
+        let targetUpper = targetMac.uppercased()
+
+        if let cached = findCachedMatch(matching: targetUpper) {
+            return cached
+        }
+
+        return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<MatchedPeripheral, Error>) in
+            let pending = PendingMatch(targetMacUpper: targetUpper, continuation: cont)
+            pendingMatches.append(pending)
+            // Timeout dispatch as a child Task — cancelled when the
+            // awaiter resolves via a normal discovery.
+            pending.timeoutTask = Task { @MainActor [weak self, weak pending] in
+                let nanos = UInt64(timeoutSec * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: nanos)
+                guard let self, let pending else { return }
+                guard let idx = self.pendingMatches.firstIndex(where: { $0 === pending }) else {
+                    return    // already resolved by a discovery match
+                }
+                self.pendingMatches.remove(at: idx)
+                pending.continuation.resume(throwing: FindError.timeout(
+                    target: targetUpper,
+                    seconds: Int(timeoutSec)
+                ))
+            }
+        }
+    }
+
+    private func findCachedMatch(matching targetMacUpper: String) -> MatchedPeripheral? {
+        for discovery in discoveries {
+            guard discovery.systemMac?.uppercased() == targetMacUpper else { continue }
+            if let entry = peripherals[discovery.id] {
+                return MatchedPeripheral(
+                    peripheral: entry.peripheral,
+                    advertisementData: entry.advertisementData,
+                    rssi: entry.rssi
+                )
+            }
+        }
+        return nil
+    }
+
+    private func dispatchAwaiters(forSystemMac mac: String, peripheralIdentifier: String) {
+        let upper = mac.uppercased()
+        guard let entry = peripherals[peripheralIdentifier] else { return }
+        let matched = MatchedPeripheral(
+            peripheral: entry.peripheral,
+            advertisementData: entry.advertisementData,
+            rssi: entry.rssi
+        )
+        // Iterate a snapshot so we can mutate the array as we resolve.
+        let snapshot = pendingMatches
+        for pending in snapshot where pending.targetMacUpper == upper {
+            if let idx = pendingMatches.firstIndex(where: { $0 === pending }) {
+                pendingMatches.remove(at: idx)
+            }
+            pending.timeoutTask?.cancel()
+            pending.continuation.resume(returning: matched)
+        }
+    }
+
+    /// Strict parser — same algorithm as `KBAdvPacketSystem
+    /// .parseAdvPacket` runs on the same bytes:
+    ///   • Eddystone service (FEAA) data present
+    ///   • Length >= `KBAdvPacketSystem.MIN_ADV_PACKET_LEN` (11)
+    ///   • Byte 0 == 0x22 (System packet via Eddystone framing)
+    ///   • MAC at bytes 3-8, formatted "%02X:..." uppercase
+    private static func parseSystemMac(fromAdvertisement advData: [String: Any]) -> String? {
+        guard let svc = advData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] else {
+            return nil
+        }
+        let eddystoneUUID = CBUUID(string: "FEAA")
+        guard let data = svc[eddystoneUUID], data.count >= 11, data[0] == 0x22 else {
+            return nil
+        }
+        return String(format: "%02X:%02X:%02X:%02X:%02X:%02X",
+                      data[3], data[4], data[5], data[6], data[7], data[8])
+    }
+
+    // MARK: - Scan internals
+
     private func beginScan(on central: CBCentralManager) {
-        // CBCentralManagerScanOptionAllowDuplicatesKey = true so we
-        // see RSSI updates over time even from peripherals we've
-        // already cataloged. Necessary to confirm a device is still
-        // present and to spot RSSI drift.
         central.scanForPeripherals(
             withServices: nil,
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
@@ -144,11 +318,21 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
     }
 
     private func ingest(
+        peripheral: CBPeripheral,
         identifier: String,
         name: String?,
         rssi: Int,
         advertisementData: [String: Any]
     ) {
+        // Keep the peripheral reference + most-recent advertisement
+        // so the production path can hand both to the SDK via
+        // KBeacon.attach2Device + KBeacon.parseAdvPacket.
+        peripherals[identifier] = PeripheralCacheEntry(
+            peripheral: peripheral,
+            advertisementData: advertisementData,
+            rssi: rssi
+        )
+
         let localName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
         let txPower = (advertisementData[CBAdvertisementDataTxPowerLevelKey] as? NSNumber)?.intValue
         let isConn = (advertisementData[CBAdvertisementDataIsConnectable] as? NSNumber)?.boolValue
@@ -172,11 +356,8 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
 
         let advKeys = advertisementData.keys.sorted()
 
-        // Target-byte substring search across every possible carrier.
-        // The SDK's KBeacon.mac parser expects specific framing
-        // (KBAdvType.System packet); we're looking BENEATH that to
-        // confirm the bytes are actually present somewhere, even if
-        // the SDK didn't recognise the format.
+        // Liberal substring match across every possible carrier —
+        // feeds the diagnostic UI only.
         var matches: [TargetMatch] = []
         let lowerLocalName = (localName ?? "").lowercased().replacingOccurrences(of: ":", with: "")
         for needle in needles {
@@ -201,10 +382,9 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
             }
         }
 
-        // Update-in-place by identifier; insert at front when new so
-        // the panel shows most-recent-seen first when sorted by
-        // lastSeen. Dedup is critical because allowDuplicates=true
-        // means iOS spams the callback per peripheral.
+        // Strict System-packet MAC — production match key.
+        let systemMac = Self.parseSystemMac(fromAdvertisement: advertisementData)
+
         let discovery = Discovery(
             id: identifier,
             name: name,
@@ -217,37 +397,33 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
             manufacturerDataHex: mfgHex,
             serviceDataHex: svcHex,
             advKeys: advKeys,
-            matches: matches
+            matches: matches,
+            systemMac: systemMac
         )
         if let index = discoveries.firstIndex(where: { $0.id == identifier }) {
-            // Preserve the original lastSeen so the row position stays
-            // stable if RSSI ticks; only the data refresh matters.
             discoveries[index] = discovery
         } else {
             discoveries.insert(discovery, at: 0)
-            // Cap to a sane upper bound so a noisy environment
-            // (airport, mall, etc.) doesn't run the panel off-screen.
             if discoveries.count > 50 {
                 discoveries.removeLast(discoveries.count - 50)
             }
+        }
+
+        // Production dispatch: if this advertisement carried a System
+        // packet, fire any awaiters whose target matches its MAC.
+        if let systemMac {
+            dispatchAwaiters(forSystemMac: systemMac, peripheralIdentifier: identifier)
         }
     }
 }
 
 extension BleDiagnosticScanner: CBCentralManagerDelegate {
-    // CBCentralManagerDelegate is @objc; iOS dispatches on the manager's
-    // queue. We passed nil (main queue) so callbacks already arrive on
-    // main, but mark nonisolated and hop back via Task @MainActor for
-    // strict-concurrency cleanliness — same pattern used in
-    // BluetoothPermissionGate and KBeaconScanner.
     nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
         let stateRaw = central.state.rawValue
         Task { @MainActor in
             guard let cb = CBManagerState(rawValue: stateRaw) else { return }
             switch cb {
             case .poweredOn:
-                // Re-bind the manager we got back so beginScan() uses
-                // the same instance the delegate fired from.
                 self.beginScan(on: central)
             case .poweredOff:
                 self.state = .stopped(reason: "radio off")
@@ -271,25 +447,23 @@ extension BleDiagnosticScanner: CBCentralManagerDelegate {
         advertisementData: [String: Any],
         rssi RSSI: NSNumber
     ) {
-        // Extract Sendable copies on the delegate queue before the
-        // hop. CBPeripheral and the advertisement dict's CBUUID
-        // values aren't Sendable; we surface only Strings / Ints /
-        // Data-derived hex.
         let identifier = peripheral.identifier.uuidString
         let name = peripheral.name
         let rssi = RSSI.intValue
-        // The advertisementData dict has mixed value types
-        // (String / NSNumber / Data / [CBUUID] / [CBUUID: Data]) — we
-        // need to keep the original dict for the ingest helper to
-        // parse keys it knows about. The dict itself isn't Sendable
-        // but its mutation is single-threaded (one dispatch queue);
-        // bridge with an @unchecked Sendable shim.
-        struct AdvShim: @unchecked Sendable {
+        // CBPeripheral is not Sendable, but: (a) it's held in process
+        // for the radio session, (b) the hop is from the manager queue
+        // to MainActor — both single-threaded contexts in practice
+        // (we passed `queue: nil` so callbacks arrive on main). Wrap
+        // in an @unchecked Sendable shim alongside the advertisement
+        // dict, same pattern as before.
+        struct DiscoveryShim: @unchecked Sendable {
+            let peripheral: CBPeripheral
             let dict: [String: Any]
         }
-        let shim = AdvShim(dict: advertisementData)
+        let shim = DiscoveryShim(peripheral: peripheral, dict: advertisementData)
         Task { @MainActor in
             self.ingest(
+                peripheral: shim.peripheral,
                 identifier: identifier,
                 name: name,
                 rssi: rssi,
