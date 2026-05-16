@@ -114,16 +114,42 @@ final class KBeaconScanner: NSObject {
         }
 
         // 2. Cross-manager safety net — retrieve the peripheral via
-        //    the SDK's CBCentralManager so it has its own handle.
+        //    the SDK's CBCentralManager so connect() satisfies
+        //    Apple's contract ("the peripheral must have been
+        //    discovered by THIS manager or retrieved via
+        //    retrievePeripherals / retrieveConnectedPeripherals").
         //    `cbBeaconMgr` is `@objc public var` on KBeaconsMgr
-        //    (verified against the SDK source). retrievePeripherals
-        //    returns an empty array if iOS hasn't cached the
-        //    peripheral on the SDK's manager; in that case we fall
-        //    back to our scanner's CBPeripheral. CBPeripheral
-        //    identity is system-wide so iOS should accept either,
-        //    but the SDK-rooted handle eliminates one class of
-        //    cross-manager ambiguity in CB.connect's internals.
+        //    (verified against the SDK source).
+        //
+        //    Brief poll-wait for the SDK's CB to reach `.poweredOn`
+        //    before calling retrievePeripherals (PR #15). The SDK's
+        //    CB was early-initialised in
+        //    `BleDiagnosticScanner.start(...)` so it normally
+        //    finishes powering up well before the first device
+        //    discovery completes; this wait is insurance for the
+        //    cold-path case where the very first advertisement
+        //    arrives faster than the SDK's CB state callback.
+        //    Calling retrievePeripherals on a `.unknown`-state CB
+        //    returns an empty array, which would force the
+        //    cross-manager-fallback path that Apple's connect()
+        //    contract doesn't guarantee will work. 100 ms × up to
+        //    10 attempts = 1 s ceiling; after that we proceed
+        //    regardless. On every device after the first, this
+        //    loop exits immediately because state is already
+        //    `.poweredOn`.
         let sdkMgr = KBeaconsMgr.sharedBeaconManager.cbBeaconMgr
+        for _ in 0..<10 {
+            if sdkMgr.state == .poweredOn { break }
+            try? await Task.sleep(nanoseconds: 100_000_000)    // 100 ms
+        }
+        //
+        //    If retrievePeripherals still returns empty after the
+        //    wait (peripheral not in iOS's cache, or the SDK's CB
+        //    is genuinely stuck), we fall back to our scanner's
+        //    CBPeripheral. That's undocumented territory and may
+        //    not work; if connect later times out from that
+        //    fallback path, the next step is the GATT-layer
+        //    rewrite flagged in PR #14.
         let sdkPeripheral = sdkMgr
             .retrievePeripherals(withIdentifiers: [matched.peripheral.identifier])
             .first ?? matched.peripheral

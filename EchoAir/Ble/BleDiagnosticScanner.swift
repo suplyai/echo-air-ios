@@ -79,8 +79,16 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
     }
 
     struct TargetMatch: Equatable, Hashable {
+        /// Raw verbatim value from `ShipmentDeviceDto.mac`. Format
+        /// unspecified by the backend; observed format is uppercase
+        /// hex with no colons, e.g. `"BC57291CD6AC"`. **Do not
+        /// assume colon-separated.** Compare against parsed System
+        /// packet MACs via `BleDiagnosticScanner.normalizeMac(_:)`,
+        /// never via direct string equality.
         let targetMac: String
+        /// `"mfg"` | `"svc:<uuid>"` | `"localName"`.
         let field: String
+        /// `"fwd"` | `"rev"`.
         let direction: String
     }
 
@@ -153,13 +161,16 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
     private var pendingMatches: [PendingMatch] = []
 
     private final class PendingMatch {
-        let targetMacUpper: String
+        /// Already passed through `BleDiagnosticScanner.normalizeMac`
+        /// at construction time, so any comparison against this
+        /// must be on a value normalised the same way.
+        let targetMacNormalized: String
         let continuation: CheckedContinuation<MatchedPeripheral, Error>
         var timeoutTask: Task<Void, Never>?
 
-        init(targetMacUpper: String,
+        init(targetMacNormalized: String,
              continuation: CheckedContinuation<MatchedPeripheral, Error>) {
-            self.targetMacUpper = targetMacUpper
+            self.targetMacNormalized = targetMacNormalized
             self.continuation = continuation
         }
     }
@@ -169,6 +180,25 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
     /// Start scanning all BLE peripherals. Idempotent.
     func start(targets: [String]) {
         Self.current = self
+        // Early-init the SDK's CBCentralManager (PR #15). Accessing
+        // `KBeaconsMgr.sharedBeaconManager` here triggers its lazy
+        // `init()` which creates the SDK-owned `cbBeaconMgr`
+        // CBCentralManager. CBCentralManager init is synchronous
+        // but its state transition to `.poweredOn` is async via
+        // the `centralManagerDidUpdateState` callback, typically
+        // a few hundred ms after init. Kicking it off here in
+        // parallel with our raw scan startup means by the time
+        // `KBeaconScanner.discover` calls
+        // `cbBeaconMgr.retrievePeripherals(withIdentifiers:)`, the
+        // SDK's CB has had ample time to power up and learn about
+        // peripherals in iOS's system-wide cache (including those
+        // discovered by OUR diagnostic CB). Without this early
+        // touch, the SDK's CB on the first device's `discover()`
+        // call would be in `.unknown` state and `retrievePeripherals`
+        // might return empty, forcing the cross-manager fallback
+        // that Apple's `connect(_:options:)` contract doesn't
+        // guarantee will work.
+        _ = KBeaconsMgr.sharedBeaconManager
         self.targets = targets
         self.needles = targets.map { mac in
             let stripped = mac.replacingOccurrences(of: ":", with: "").lowercased()
@@ -229,14 +259,19 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
         matching targetMac: String,
         timeoutSec: TimeInterval
     ) async throws -> MatchedPeripheral {
-        let targetUpper = targetMac.uppercased()
+        // Normalise once at the entry. Every downstream comparison
+        // — cache lookup, awaiter dispatch — works on the
+        // normalised form so format-mismatch can't silently fail
+        // the match. See `normalizeMac(_:)` docstring for the bug
+        // this prevents (PR #15).
+        let targetNormalized = Self.normalizeMac(targetMac)
 
-        if let cached = findCachedMatch(matching: targetUpper) {
+        if let cached = findCachedMatch(targetMacNormalized: targetNormalized) {
             return cached
         }
 
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<MatchedPeripheral, Error>) in
-            let pending = PendingMatch(targetMacUpper: targetUpper, continuation: cont)
+            let pending = PendingMatch(targetMacNormalized: targetNormalized, continuation: cont)
             pendingMatches.append(pending)
             // Timeout dispatch as a child Task — cancelled when the
             // awaiter resolves via a normal discovery.
@@ -249,16 +284,17 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
                 }
                 self.pendingMatches.remove(at: idx)
                 pending.continuation.resume(throwing: FindError.timeout(
-                    target: targetUpper,
+                    target: targetNormalized,
                     seconds: Int(timeoutSec)
                 ))
             }
         }
     }
 
-    private func findCachedMatch(matching targetMacUpper: String) -> MatchedPeripheral? {
+    private func findCachedMatch(targetMacNormalized: String) -> MatchedPeripheral? {
         for discovery in discoveries {
-            guard discovery.systemMac?.uppercased() == targetMacUpper else { continue }
+            guard let systemMac = discovery.systemMac else { continue }
+            guard Self.normalizeMac(systemMac) == targetMacNormalized else { continue }
             if let entry = peripherals[discovery.id] {
                 return MatchedPeripheral(
                     peripheral: entry.peripheral,
@@ -271,7 +307,7 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
     }
 
     private func dispatchAwaiters(forSystemMac mac: String, peripheralIdentifier: String) {
-        let upper = mac.uppercased()
+        let normalized = Self.normalizeMac(mac)
         guard let entry = peripherals[peripheralIdentifier] else { return }
         let matched = MatchedPeripheral(
             peripheral: entry.peripheral,
@@ -280,7 +316,7 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
         )
         // Iterate a snapshot so we can mutate the array as we resolve.
         let snapshot = pendingMatches
-        for pending in snapshot where pending.targetMacUpper == upper {
+        for pending in snapshot where pending.targetMacNormalized == normalized {
             if let idx = pendingMatches.firstIndex(where: { $0 === pending }) {
                 pendingMatches.remove(at: idx)
             }
@@ -305,6 +341,29 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
         }
         return String(format: "%02X:%02X:%02X:%02X:%02X:%02X",
                       data[3], data[4], data[5], data[6], data[7], data[8])
+    }
+
+    /// Canonicalise a MAC for production-path comparison. Strips
+    /// every colon and uppercases the rest — collapses every
+    /// observed-in-the-wild MAC notation (with colons, without,
+    /// hyphenated, mixed case) onto one comparable form.
+    ///
+    /// **Why this exists (PR #15).** `parseSystemMac` always emits
+    /// colon-separated uppercase (`"BC:57:29:1C:D6:AC"`) — the
+    /// SDK's `KBAdvPacketSystem.parseAdvPacket` produces that
+    /// format via `String(format: "%02X:%02X:…")`. But
+    /// `ShipmentDeviceDto.mac` comes from the backend in
+    /// hex-no-colons (`"BC57291CD6AC"`, observed via the diagnostic
+    /// panel). Direct string equality between the two fails
+    /// silently — production scanner times out at 25s while the
+    /// diagnostic panel (which uses substring matching on hex)
+    /// shows MATCH. Both sides must be normalised before
+    /// comparison. Public so `KBeaconScanner` can normalise on its
+    /// side too if it ever does direct MAC comparison.
+    static func normalizeMac(_ mac: String) -> String {
+        mac.replacingOccurrences(of: ":", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .uppercased()
     }
 
     // MARK: - Scan internals
