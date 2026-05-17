@@ -137,6 +137,18 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
     @Published private(set) var discoveries: [Discovery] = []
     @Published private(set) var state: State = .idle
     @Published private(set) var targets: [String] = []
+    /// Connect-attempt log. Lines appended by `KBeaconScanner.discover`
+    /// and `KBeaconBridge.connect` (+ its `onConnStateChange` delegate)
+    /// via `BleDiagnosticScanner.log(_:)`. Surfaces on the on-screen
+    /// diagnostic panel so TestFlight testers can see what's happening
+    /// after discovery succeeds — answers questions like "is
+    /// `retrievePeripherals` returning the SDK-rooted peripheral or
+    /// the fallback?", "is `connectEnhanced` returning true?", "what
+    /// state changes are coming back?". FIFO-capped at 200 lines so
+    /// the panel stays readable across multiple device attempts.
+    /// **Temporary** — removed in the diagnostic-cleanup PR alongside
+    /// the rest of this scanner.
+    @Published private(set) var connectLog: [String] = []
 
     private var needles: [(target: String, fwd: String, rev: String)] = []
 
@@ -343,6 +355,32 @@ final class BleDiagnosticScanner: NSObject, ObservableObject {
         return String(format: "%02X:%02X:%02X:%02X:%02X:%02X",
                       data[3], data[4], data[5], data[6], data[7], data[8])
     }
+
+    /// Diagnostic logger usable from any thread/actor. Dispatches to
+    /// MainActor and appends to the active scanner's `connectLog`.
+    /// Silent no-op when no scanner is active (e.g. when called
+    /// outside the Collection screen's lifetime). Caller doesn't need
+    /// to be `async`. **Temporary** — removed alongside this scanner
+    /// in the diagnostic-cleanup PR.
+    nonisolated static func log(_ line: String) {
+        Task { @MainActor in
+            current?.appendConnectLog(line)
+        }
+    }
+
+    private func appendConnectLog(_ line: String) {
+        let stamp = Self.logFormatter.string(from: Date())
+        connectLog.append("[\(stamp)] \(line)")
+        if connectLog.count > 200 {
+            connectLog.removeFirst(connectLog.count - 200)
+        }
+    }
+
+    private static let logFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f
+    }()
 
     /// Canonicalise a MAC for production-path comparison. Strips
     /// every colon and uppercases the rest — collapses every

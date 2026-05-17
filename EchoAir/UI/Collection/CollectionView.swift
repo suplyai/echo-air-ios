@@ -265,6 +265,22 @@ private struct DiagnosticSection: View {
                     Divider()
                 }
             }
+
+            // Connect log — temporary, removed in the cleanup PR.
+            if !scanner.connectLog.isEmpty {
+                Divider().padding(.top, 4)
+                Text(verbatim: "Connect log (\(scanner.connectLog.count) lines):")
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .padding(.top, 4)
+                ForEach(Array(scanner.connectLog.enumerated()), id: \.offset) { _, line in
+                    Text(verbatim: line)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .textSelection(.enabled)
+                }
+            }
         }
         .padding(12)
         .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
