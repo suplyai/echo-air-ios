@@ -94,7 +94,10 @@ final class KBeaconScanner: NSObject {
     /// registered in `KBeaconsMgr.sharedBeaconManager.beacons` for
     /// any SDK-internal lookups by uuid (e.g. delegate routing).
     func discover(mac: String, timeoutSec: TimeInterval = KBeaconScanner.defaultTimeoutSec) async throws -> KBeacon {
+        BleDiagnosticScanner.log("[\(mac)] discover() entry")
+
         guard let rawScanner = BleDiagnosticScanner.current else {
+            BleDiagnosticScanner.log("[\(mac)] ABORT: BleDiagnosticScanner.current is nil")
             throw ScannerError.rawScannerUnavailable
         }
 
@@ -108,10 +111,13 @@ final class KBeaconScanner: NSObject {
                 timeoutSec: timeoutSec
             )
         } catch BleDiagnosticScanner.FindError.timeout {
+            BleDiagnosticScanner.log("[\(mac)] findPeripheral timeout (\(Int(timeoutSec))s)")
             throw ScannerError.discoveryTimeout(seconds: Int(timeoutSec))
         } catch BleDiagnosticScanner.FindError.scannerStopped(let reason) {
+            BleDiagnosticScanner.log("[\(mac)] findPeripheral aborted: \(reason)")
             throw ScannerError.bleStateChangedMidScan(state: reason)
         }
+        BleDiagnosticScanner.log("[\(mac)] findPeripheral OK; periph=\(matched.peripheral.identifier.uuidString.prefix(8)) rssi=\(matched.rssi)")
 
         // 2. Cross-manager safety net — retrieve the peripheral via
         //    the SDK's CBCentralManager so connect() satisfies
@@ -138,10 +144,14 @@ final class KBeaconScanner: NSObject {
         //    loop exits immediately because state is already
         //    `.poweredOn`.
         let sdkMgr = KBeaconsMgr.sharedBeaconManager.cbBeaconMgr
+        BleDiagnosticScanner.log("[\(mac)] sdk CB state pre-wait: \(Self.cbStateName(sdkMgr.state))")
+        var waitedMs = 0
         for _ in 0..<10 {
             if sdkMgr.state == .poweredOn { break }
             try? await Task.sleep(nanoseconds: 100_000_000)    // 100 ms
+            waitedMs += 100
         }
+        BleDiagnosticScanner.log("[\(mac)] sdk CB state post-wait: \(Self.cbStateName(sdkMgr.state)) (\(waitedMs)ms)")
         //
         //    If retrievePeripherals still returns empty after the
         //    wait (peripheral not in iOS's cache, or the SDK's CB
@@ -150,9 +160,13 @@ final class KBeaconScanner: NSObject {
         //    not work; if connect later times out from that
         //    fallback path, the next step is the GATT-layer
         //    rewrite flagged in PR #14.
-        let sdkPeripheral = sdkMgr
-            .retrievePeripherals(withIdentifiers: [matched.peripheral.identifier])
-            .first ?? matched.peripheral
+        let retrieved = sdkMgr.retrievePeripherals(withIdentifiers: [matched.peripheral.identifier])
+        let usingSdkRooted = retrieved.first != nil
+        let sdkPeripheral = retrieved.first ?? matched.peripheral
+        BleDiagnosticScanner.log("[\(mac)] retrievePeripherals: \(retrieved.count) result(s); using \(usingSdkRooted ? "SDK-ROOTED" : "FALLBACK (raw scanner peripheral)")")
+        if usingSdkRooted, let sdkP = retrieved.first {
+            BleDiagnosticScanner.log("[\(mac)]   SDK peripheral state=\(Self.peripheralStateName(sdkP.state)) sameIdentifier=\(sdkP.identifier == matched.peripheral.identifier)")
+        }
 
         // 3. Construct the KBeacon and run the same init sequence the
         //    SDK's own didDiscover would have run on a successful
@@ -171,11 +185,12 @@ final class KBeaconScanner: NSObject {
             beaconMgr: KBeaconsMgr.sharedBeaconManager
         )
         let rssiInt8: Int8 = Int8(clamping: matched.rssi)
-        _ = beacon.parseAdvPacket(
+        let parsed = beacon.parseAdvPacket(
             advData: matched.advertisementData,
             rssi: rssiInt8,
             uuid: sdkPeripheral.identifier.uuidString
         )
+        BleDiagnosticScanner.log("[\(mac)] attach2Device done; parseAdvPacket=\(parsed)")
 
         // 4. Register in the SDK's public `beacons` dict by uuid.
         //    Some SDK paths consult this dict; keeping it populated
@@ -187,6 +202,31 @@ final class KBeaconScanner: NSObject {
             KBeaconsMgr.sharedBeaconManager.beacons[uuidString] = beacon
         }
 
+        BleDiagnosticScanner.log("[\(mac)] discover() returning KBeacon to orchestrator")
         return beacon
+    }
+
+    // MARK: - Diagnostic helpers (temporary; removed with diagnostic-cleanup PR)
+
+    fileprivate static func cbStateName(_ state: CBManagerState) -> String {
+        switch state {
+        case .unknown:      return ".unknown"
+        case .resetting:    return ".resetting"
+        case .unsupported:  return ".unsupported"
+        case .unauthorized: return ".unauthorized"
+        case .poweredOff:   return ".poweredOff"
+        case .poweredOn:    return ".poweredOn"
+        @unknown default:   return ".raw\(state.rawValue)"
+        }
+    }
+
+    fileprivate static func peripheralStateName(_ state: CBPeripheralState) -> String {
+        switch state {
+        case .disconnected:  return ".disconnected"
+        case .connecting:    return ".connecting"
+        case .connected:     return ".connected"
+        case .disconnecting: return ".disconnecting"
+        @unknown default:    return ".raw\(state.rawValue)"
+        }
     }
 }

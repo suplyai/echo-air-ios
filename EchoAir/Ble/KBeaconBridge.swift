@@ -105,6 +105,7 @@ final class KBeaconBridge: NSObject {
         // front so callers throw rather than hang.
         let timeoutSec = Double(timeoutMs) / 1000.0
         guard password.count >= 8, password.count <= 16, timeoutSec > 3.0 else {
+            BleDiagnosticScanner.log("bridge ABORT: precondition (pwLen=\(password.count) timeoutSec=\(timeoutSec))")
             throw BridgeError.requestRejected
         }
 
@@ -115,6 +116,9 @@ final class KBeaconBridge: NSObject {
         para.readTriggerPara = false
         para.readSlotPara = false
 
+        let macForLog = beacon.mac ?? "?"
+        BleDiagnosticScanner.log("bridge[\(macForLog)] calling connectEnhanced (pwLen=\(password.count) timeoutSec=\(timeoutSec))")
+
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             self.connectContinuation = cont
             let accepted = beacon.connectEnhanced(
@@ -123,6 +127,7 @@ final class KBeaconBridge: NSObject {
                 connPara: para,
                 delegate: self
             )
+            BleDiagnosticScanner.log("bridge[\(macForLog)] connectEnhanced returned: \(accepted)")
             if !accepted {
                 self.connectContinuation = nil
                 cont.resume(throwing: BridgeError.requestRejected)
@@ -217,10 +222,16 @@ final class KBeaconBridge: NSObject {
 
 extension KBeaconBridge: ConnStateDelegate {
     func onConnStateChange(_ beacon: KBeacon, state: KBConnState, evt: KBConnEvtReason) {
+        let macForLog = beacon.mac ?? "?"
+        let stateStr = String(describing: state)
+        let evtStr = String(describing: evt)
+        BleDiagnosticScanner.log("bridge[\(macForLog)] onConnStateChange state=\(stateStr) evt=\(evtStr)")
+
         guard let cont = connectContinuation else {
             // Post-connect state change (e.g. unexpected disconnect during a
             // read). The in-flight read's callback will fire with an error;
             // we just log for visibility here.
+            BleDiagnosticScanner.log("bridge[\(macForLog)]   (post-connect, no continuation)")
             print("[KBeaconBridge] post-connect state=\(state.rawValue) evt=\(evt.rawValue)")
             return
         }
