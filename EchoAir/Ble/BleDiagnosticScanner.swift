@@ -1,5 +1,6 @@
 import Foundation
 @preconcurrency import CoreBluetooth
+@preconcurrency import kbeaconlib2
 
 /// Promoted from "diagnostic-only panel scanner" (PR #10/#11) to the
 /// production discovery path (PR #14). Owns its own `CBCentralManager`,
